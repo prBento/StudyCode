@@ -14,6 +14,12 @@ This is a study project focused on Artificial Intelligence and Game Development.
 * **Agent AI:** Q-Learning (Local Reinforcement Learning)
 * **Environment AI:** LLM API Integration (Gemini)
 
+### 🧠 AI Architecture: Why Q-Learning?
+For the Agent's brain, we chose **Tabular Q-Learning** over more complex Deep Learning models (like DQN) for the following reasons:
+1. **Discrete State Space:** The grid-based nature of our maze makes it perfect for a finite state representation. The agent can map its immediate surroundings (e.g., walls adjacent to it) as clear, discrete states.
+2. **Transparency:** Unlike Neural Networks (which act as "black boxes"), a Q-Table is entirely transparent. We can pause the game and read exactly *why* the agent chose a specific action by looking at the mathematical values assigned to each state.
+3. **The Bellman Equation:** The agent updates its knowledge using the Bellman Equation. This is crucial because it allows the AI to value *future, long-term rewards* (surviving) rather than just making greedy, immediate choices. Through the Discount Factor ($\gamma$), the agent learns to avoid paths that look safe now but lead to dead-ends later.
+
 ### 🚦 Git & Commit Standards
 To maintain a clean and professional history, this project follows the *Conventional Commits* specification:
 * `feat:` For new features
@@ -50,6 +56,12 @@ Este é um projeto de estudo focado em Inteligência Artificial e Desenvolviment
 * **Motor Gráfico:** Pygame
 * **IA do Agente:** Q-Learning (Aprendizado por Reforço Local)
 * **IA do Ambiente:** Integração via API com LLM (Gemini)
+
+### 🧠 Arquitetura da IA: Por que Q-Learning?
+Para o cérebro do Agente, escolhemos o **Q-Learning Tabular** em vez de modelos mais complexos de Deep Learning (como DQN) pelos seguintes motivos:
+1. **Espaço de Estados Discreto:** A natureza em grade (grid) do nosso labirinto o torna perfeito para uma representação de estados finita. O agente consegue mapear seus arredores imediatos como estados claros e discretos.
+2. **Transparência:** Diferente de Redes Neurais (que funcionam como "caixas pretas"), uma Tabela-Q é totalmente transparente. Podemos pausar o jogo e ler exatamente *por que* o agente tomou uma ação específica apenas olhando os valores matemáticos de cada estado.
+3. **A Equação de Bellman:** O agente atualiza seu conhecimento usando a Equação de Bellman. Isso é vital porque permite que a IA valorize *recompensas futuras de longo prazo* (sobrevivência) em vez de focar apenas no momento imediato. Através do Fator de Desconto ($\gamma$), o agente aprende a evitar caminhos que parecem seguros agora, mas que levam a becos sem saída mais tarde.
 
 ### 🚦 Padrões de Git e Commits
 Para manter um histórico limpo e profissional, este projeto segue a especificação *Conventional Commits*:
