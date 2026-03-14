@@ -1,6 +1,7 @@
 import pygame
 import sys
 import random
+from agent import QLearningAgent
 
 # ====================================
 # 1. CONFIGURATION & CONSTANTS
@@ -37,6 +38,23 @@ START_X = 0
 START_Y = 0
 player_x = START_X
 player_y = START_Y
+
+# Actions: 0=UP, 1=DOWN, 2=LEFT, 3-RIGHT
+agent = QLearningAgent(actions=[0, 1, 2, 3])
+
+def get_state(x, y, hazards_lists):
+     """
+     The AI's Radar. Looks 1 block for every direction.
+     Returns a tuple of 4 values (0 for safe, 1 for danger)
+     """
+     danger_up = 1 if y - GRID_SIZE < 0 or (x, y - GRID_SIZE) in hazards_lists else 0
+     danger_down = 1 if y + GRID_SIZE >= WINDOW_HEIGHT or (x, y + GRID_SIZE) in hazards_lists else 0
+     danger_left = 1 if x - GRID_SIZE < 0 or (x - GRID_SIZE, y) in hazards_lists else 0
+     danger_right = 1 if x + GRID_SIZE >= WINDOW_WIDTH or (x + GRID_SIZE, y) in hazards_lists else 0
+
+     # States is a tuple like (1, 0, 0, 1) meaning danger UP and RIGHT
+     return(danger_up, danger_down, danger_left, danger_right)
+
 
 # Function to generate a new random maze
 def generate_maze():
@@ -75,34 +93,47 @@ while running:
         # if the user click the "X" button on the window
         if event.type == pygame.QUIT:
             running = False
-
-        if event.type == pygame.KEYDOWN:
-            # Grid-based movement logic with boundary checking to keep player on screen
-            if event.key == pygame.K_UP:
-                if player_y > 0:
-                    player_y -= GRID_SIZE
-            elif event.key == pygame.K_DOWN:
-                    if player_y < WINDOW_HEIGHT - GRID_SIZE:
-                        player_y += GRID_SIZE
-            elif event.key == pygame.K_LEFT:
-                    if player_x > 0:
-                        player_x -= GRID_SIZE
-            elif event.key == pygame.K_RIGHT:
-                    if player_x < WINDOW_WIDTH - GRID_SIZE:
-                        player_x += GRID_SIZE
     
     # --------------------------------------
     # B. GAME LOGIC UPDATE
     # --------------------------------------
-    # Create a tuple of the player's current position
-    player_pos = (player_x, player_y)
+    # 1. Observe the current state (Radar)
+    current_state = get_state(player_x, player_y, hazards)
 
-    # Check if the player stepped on any hazard
-    if player_pos in hazards:
-         print("Game Over! Restarting...")  # Prints to the VS Code terminal
-         player_x = START_X                 # Reset X
-         player_y = START_Y                 # Reset Y
-         hazards = generate_maze()
+    # 2. Ask the Brain what to do
+    action = agent.choose__action(current_state)
+
+    # 3. Predict where the action will take us
+    next_x, next_y = player_x, player_y
+    if action == 0: next_y -= GRID_SIZE     # UP
+    elif action == 1: next_y += GRID_SIZE   # DOWN
+    elif action == 2: next_x -= GRID_SIZE   # LEFT
+    elif action == 3: next_y += GRID_SIZE   # RIGHT
+
+    # 4. Check if the planned move is deadly (wall or red bloack)
+    is_deadly = False
+    if next_x < 0 or next_x >= WINDOW_WIDTH or next_y < 0 or next_y >= WINDOW_HEIGHT:
+         is_deadly = True # Hit a boundary wall
+    elif (next_x, next_y) in hazards:
+         is_deadly = True # Hit a red hazard
+
+    # 5. Assing Rewards and Move
+    if is_deadly:
+         reward = -100
+         print(f"Crash AI Randomness (Epsilon): {agent.epsilon:.2f} | Resetting map...")
+         player_x = START_X
+         player_y = START_Y
+         hazards = generate_maze() # Rebuild de world on death
+
+    else:
+         reward = 1 # Survived this step!
+         player_x, player_y = next_x, next_y # Actually move the character
+
+    # 6. Observe the new state after moving
+    next_state = get_state(player_x, player_y, hazards)
+
+    # 7. TEACH THE BRAIN (Update the Q-Table)
+    agent.learn(current_state, action, reward, next_state)
 
     # --------------------------------------
     # C. RENDERING (DRAWING TO SCREEN)
