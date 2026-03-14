@@ -12,7 +12,8 @@ FPS = 30
 # RGB Color Definitions
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
-BLUE = (0, 100, 255) # Agent
+BLUE = (0, 100, 255)    # Agent
+RED = (255, 0, 0)       # Hazard/Perigo
 
 # ==========================================
 # 2. SYSTEM INITIALIZATION
@@ -30,9 +31,19 @@ clock = pygame.time.Clock()
 # ==========================================
 # 3. GAME STATE (VARIABLES)
 # ==========================================
-# The top-left corner of the window is X:0, Y:0
-player_x = 0
-player_y = 0
+# We define start constants so we can easily reset the player later
+START_X = 0
+START_Y = 0
+player_x = START_X
+player_y = START_Y
+
+# A list of tuples containing the (X, Y) coordinates of our fixed hazards.
+# Notice they are all multiples of our GRID_SIZE (40)
+hazards = [
+    (120, 120), (160, 120), (200, 120), # Horizontal wall
+    (400, 320), (440, 320),             # Small block
+    (600, 160), (600, 200), (600, 240)  # Vertical wall
+]
 
 # ==========================================
 # 4. MAIN GAME LOOP
@@ -70,13 +81,25 @@ while running:
     # --------------------------------------
     # B. GAME LOGIC UPDATE
     # --------------------------------------
-    # (Reserved for future use: updating AI state, moving dynamic hazards, etc.)
+    # Create a tuple of the player's current position
+    player_pos = (player_x, player_y)
+
+    # Check if the player stepped on any hazard
+    if player_pos in hazards:
+         print("Game Over! Restarting...")  # Prints to the VS Code terminal
+         player_x = START_X                 # Reset X
+         player_y = START_Y                 # Reset Y
 
     # --------------------------------------
     # C. RENDERING (DRAWING TO SCREEN)
     # --------------------------------------
     # 1. Clear the screen from the previous frame
     screen.fill(BLACK)
+
+    # Draw all hazards using a loop
+    for h_x, h_y in hazards:
+         hazard_rect = (h_x, h_y, GRID_SIZE, GRID_SIZE)
+         pygame.draw.rect(screen, RED, hazard_rect)
 
     # 2. Define de player's shape and position (X, Y, Width, Height)
     player_rect = (player_x, player_y, GRID_SIZE, GRID_SIZE)
