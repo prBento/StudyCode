@@ -1,5 +1,6 @@
 import pygame
 import sys
+import random
 
 # ====================================
 # 1. CONFIGURATION & CONSTANTS
@@ -37,13 +38,25 @@ START_Y = 0
 player_x = START_X
 player_y = START_Y
 
-# A list of tuples containing the (X, Y) coordinates of our fixed hazards.
-# Notice they are all multiples of our GRID_SIZE (40)
-hazards = [
-    (120, 120), (160, 120), (200, 120), # Horizontal wall
-    (400, 320), (440, 320),             # Small block
-    (600, 160), (600, 200), (600, 240)  # Vertical wall
-]
+# Function to generate a new random maze
+def generate_maze():
+    new_hazards = []
+    
+    # Loop through every possible column (X) and row (Y) in our grid
+    for x in range(0, WINDOW_WIDTH, GRID_SIZE):
+         for y in range(0, WINDOW_HEIGHT, GRID_SIZE):
+               # PROTECT THE SPAWN: Don't put a hazard where the player starts!
+               if x == START_X and y == START_Y:
+                    continue
+               
+               # 20% chance to spawn a hazard in the current block
+               if random.random() < 0.20:
+                    new_hazards.append((x,y))
+    
+    return new_hazards
+
+# Create the first maze when the game starts
+hazards = generate_maze()
 
 # ==========================================
 # 4. MAIN GAME LOOP
@@ -89,6 +102,7 @@ while running:
          print("Game Over! Restarting...")  # Prints to the VS Code terminal
          player_x = START_X                 # Reset X
          player_y = START_Y                 # Reset Y
+         hazards = generate_maze()
 
     # --------------------------------------
     # C. RENDERING (DRAWING TO SCREEN)
