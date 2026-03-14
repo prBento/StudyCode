@@ -8,8 +8,10 @@ from agent import QLearningAgent
 # ====================================
 WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 600
-GRID_SIZE = 40 # The world is divided into 40x40 pixel blocks
-FPS = 30
+GRID_SIZE = 40          # The world is divided into 40x40 pixel blocks
+FPS = 2                # Game speed slowled down to watch de AI learn
+HAZARD_LIFETIME = 50    # How many frames a hazard stays on screen
+SPAWN_CHANCE = 0.10     #10% chance to spawn a new hazard every single frame
 
 # RGB Color Definitions
 BLACK = (0, 0, 0)
@@ -58,18 +60,20 @@ def get_state(x, y, hazards_lists):
 
 # Function to generate a new random maze
 def generate_maze():
-    new_hazards = []
+    new_hazards = {}
     
     # Loop through every possible column (X) and row (Y) in our grid
     for x in range(0, WINDOW_WIDTH, GRID_SIZE):
          for y in range(0, WINDOW_HEIGHT, GRID_SIZE):
+               
                # PROTECT THE SPAWN: Don't put a hazard where the player starts!
                if x == START_X and y == START_Y:
                     continue
                
                # 20% chance to spawn a hazard in the current block
                if random.random() < 0.20:
-                    new_hazards.append((x,y))
+                    # Set the key (x, y) with a random initial lifetime value
+                    new_hazards[(x, y)] = random.randint(20, HAZARD_LIFETIME)
     
     return new_hazards
 
@@ -95,8 +99,32 @@ while running:
             running = False
     
     # --------------------------------------
-    # B. GAME LOGIC UPDATE
+    # B. GAME LOGIC UPDATE (THE AI BRAIN)
     # --------------------------------------
+    
+    # UPDATE DYNAMIC ENVIRONMENT
+    # 1. Age exiting hazards and remove dead ones
+    keys_to_remove = []
+    for pos in hazards:
+         hazards[pos] -= 1 # Decrease lifetime by 1 frame
+         if hazards[pos] <= 0:
+              keys_to_remove.append(pos)
+
+    for pos in keys_to_remove:
+         del hazards[pos] # Delete the hazard from dictionary
+
+    # 2. Randomly spawn new hazards during gameplay
+    if random.random() < SPAWN_CHANCE:
+         # Pick a random grid coordinate
+         hx = random.randrange(0, WINDOW_WIDTH, GRID_SIZE)
+         hy = random.randrange(0, WINDOW_HEIGHT, GRID_SIZE)
+
+         # Make sure ir doesn't spaws ON the player or where alrealdy exists
+         if (hx, hy) != (player_x, player_y) and (hx, hy) not in hazards:
+              hazards[(hx, hy)] = HAZARD_LIFETIME
+
+
+    # KNOWLEDGE CICLE
     # 1. Observe the current state (Radar)
     current_state = get_state(player_x, player_y, hazards)
 
