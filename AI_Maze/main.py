@@ -114,14 +114,16 @@ while running:
          del hazards[pos] # Delete the hazard from dictionary
 
     # 2. Randomly spawn new hazards during gameplay
-    if random.random() < SPAWN_CHANCE:
-         # Pick a random grid coordinate
-         hx = random.randrange(0, WINDOW_WIDTH, GRID_SIZE)
-         hy = random.randrange(0, WINDOW_HEIGHT, GRID_SIZE)
+    # We loop 3 times to potentially spawn up to 3 hazards per frame, maintaining mao density
+    for _ in range(3):
+        if random.random() < 0.40: # 40% chance inside the loop
+            # Pick a random grid coordinate
+            hx = random.randrange(0, WINDOW_WIDTH, GRID_SIZE)
+            hy = random.randrange(0, WINDOW_HEIGHT, GRID_SIZE)
 
-         # Make sure ir doesn't spaws ON the player or where alrealdy exists
-         if (hx, hy) != (player_x, player_y) and (hx, hy) not in hazards:
-              hazards[(hx, hy)] = HAZARD_LIFETIME
+            # Make sure ir doesn't spaws ON the player or where alrealdy exists
+            if (hx, hy) != (player_x, player_y) and (hx, hy) not in hazards:
+                hazards[(hx, hy)] = HAZARD_LIFETIME
 
 
     # KNOWLEDGE CICLE
@@ -129,14 +131,14 @@ while running:
     current_state = get_state(player_x, player_y, hazards)
 
     # 2. Ask the Brain what to do
-    action = agent.choose__action(current_state)
+    action = agent.choose_action(current_state)
 
     # 3. Predict where the action will take us
     next_x, next_y = player_x, player_y
     if action == 0: next_y -= GRID_SIZE     # UP
     elif action == 1: next_y += GRID_SIZE   # DOWN
     elif action == 2: next_x -= GRID_SIZE   # LEFT
-    elif action == 3: next_y += GRID_SIZE   # RIGHT
+    elif action == 3: next_x += GRID_SIZE   # RIGHT
 
     # 4. Check if the planned move is deadly (wall or red bloack)
     is_deadly = False

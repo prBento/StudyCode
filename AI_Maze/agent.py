@@ -24,7 +24,7 @@ class QLearningAgent:
             self.q_table[state] = [0.0 for _ in self.actions]
         return self.q_table[state]
     
-    def choose__action(self, state):
+    def choose_action(self, state):
         """ Decides whether to take a random action or the best known action. """
         # 1. EXPLORE: Take a random action to discover the map
         if random.random() < self.epsilon:
