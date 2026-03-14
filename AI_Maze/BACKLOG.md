@@ -12,6 +12,7 @@
 ### 🎨 Graphics & Polish
 - [ ] **Sprite Integration:** Replace the basic Pygame rectangles with actual 2D sprites (e.g., an indie-style character, textured walls, and animated hazards).
 - [ ] **Visual Themes:** Add background colors or tilesets to make it look like a real maze rather than a terminal grid.
+- [ ] **Explainable AI (XAI) Thought Bubbles:** Implement a UI thought bubble above the agent. It will translate the Q-Table mathematical values into human-readable natural language (e.g., "Right is dangerous, better go up!"), optionally using LLM generation for deeper reflections during game pauses.
 
 ---
 
@@ -26,3 +27,4 @@
 ### 🎨 Gráficos & Polimento
 - [ ] **Integração de Sprites:** Substituir os retângulos básicos do Pygame por sprites 2D reais (ex: um personagem estilo indie, paredes texturizadas e perigos animados).
 - [ ] **Temas Visuais:** Adicionar cores de fundo ou *tilesets* para fazer com que pareça um labirinto real em vez de uma grade de terminal.
+- [ ] **Balões de Pensamento (IA Explicável - XAI):** Implementar um balão de pensamento na UI acima do agente. Ele traduzirá os valores matemáticos da Q-Table em linguagem natural humana (ex: "A direita é perigosa, melhor ir para cima!"), usando opcionalmente geração via LLM para reflexões mais profundas durante pausas do jogo.
