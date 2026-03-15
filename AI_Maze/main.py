@@ -36,10 +36,8 @@ clock = pygame.time.Clock()
 # 3. GAME STATE (VARIABLES)
 # ==========================================
 # We define start constants so we can easily reset the player later
-START_X = 0
-START_Y = 0
-player_x = START_X
-player_y = START_Y
+player_x = random.randrange(0, WINDOW_WIDTH, GRID_SIZE)
+player_y = random.randrange(0, WINDOW_HEIGHT, GRID_SIZE)
 
 # Actions: 0=UP, 1=DOWN, 2=LEFT, 3-RIGHT
 agent = QLearningAgent(actions=[0, 1, 2, 3])
@@ -75,19 +73,28 @@ def get_state(x, y, hazards_lists):
 
 
 # Function to generate a new random maze
-def generate_maze():
+def generate_maze(px, py):
     new_hazards = {}
-    
+
+    # SAFE ZONE
+    safe_zone = [
+         (px, py),              # CENTER (Player)
+         (px, py - GRID_SIZE),  # UP
+         (px, py + GRID_SIZE),  # DOWN
+         (px - GRID_SIZE, py),  # LEFT
+         (px + GRID_SIZE, py)   # RIGHT
+    ]
+        
     # Loop through every possible column (X) and row (Y) in our grid
     for x in range(0, WINDOW_WIDTH, GRID_SIZE):
          for y in range(0, WINDOW_HEIGHT, GRID_SIZE):
                
                # PROTECT THE SPAWN: Don't put a hazard where the player starts!
-               if x == START_X and y == START_Y:
+               if (x, y) in safe_zone:
                     continue
                
                # 20% chance to spawn a hazard in the current block
-               if random.random() < 0.20:
+               if random.random() < current_spawn_chance:
                     # Tempo de vida proporcional. Evita erro de range vazio.
                     min_life = max(1, int(current_hazard_lifetime * 0.5))
                     new_hazards[(x, y)] = random.randint(min_life, current_hazard_lifetime)
@@ -95,7 +102,7 @@ def generate_maze():
     return new_hazards
 
 # Create the first maze when the game starts
-hazards = generate_maze()
+hazards = generate_maze(player_x, player_y)
 
 # ==========================================
 # 4. MAIN GAME LOOP
@@ -172,9 +179,9 @@ while running:
          deaths += 1
          frames_survived = 0
          print(f"Crash AI Randomness (Epsilon): {agent.epsilon:.2f} | Resetting map...")
-         player_x = START_X
-         player_y = START_Y
-         hazards = generate_maze() # Rebuild de world on death
+         player_x = random.randrange(0, WINDOW_WIDTH, GRID_SIZE)
+         player_y = random.randrange(0, WINDOW_HEIGHT, GRID_SIZE)
+         hazards = generate_maze(player_x, player_y) # Rebuild de world on death
 
     else:
          reward = 1 # Survived this step!
