@@ -2,6 +2,7 @@ import pygame
 import sys
 import random
 from agent import QLearningAgent
+from director import GameDirector
 
 # ====================================
 # 1. CONFIGURATION & CONSTANTS
@@ -9,9 +10,8 @@ from agent import QLearningAgent
 WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 600
 GRID_SIZE = 40          # The world is divided into 40x40 pixel blocks
-FPS = 2                # Game speed slowled down to watch de AI learn
-HAZARD_LIFETIME = 50    # How many frames a hazard stays on screen
-SPAWN_CHANCE = 0.10     #10% chance to spawn a new hazard every single frame
+FPS = 10                # Game speed slowled down to watch de AI learn
+
 
 # RGB Color Definitions
 BLACK = (0, 0, 0)
@@ -44,6 +44,22 @@ player_y = START_Y
 # Actions: 0=UP, 1=DOWN, 2=LEFT, 3-RIGHT
 agent = QLearningAgent(actions=[0, 1, 2, 3])
 
+# AI Game Director & Metrics
+director = GameDirector()
+
+# Mutable environment variables (controlled by the LLM)
+current_spawn_chance = 0.10
+current_hazard_lifetime = 50
+
+# Performance tracking metrics
+deaths = 0
+frames_survived = 0
+max_survival_time = 0
+
+# Director evaluation timer
+EVALUATION_INTERNAL = 600 # The LLM will evaluate the game every 300 frames
+frame_counter = 0
+
 def get_state(x, y, hazards_lists):
      """
      The AI's Radar. Looks 1 block for every direction.
@@ -73,7 +89,7 @@ def generate_maze():
                # 20% chance to spawn a hazard in the current block
                if random.random() < 0.20:
                     # Set the key (x, y) with a random initial lifetime value
-                    new_hazards[(x, y)] = random.randint(20, HAZARD_LIFETIME)
+                    new_hazards[(x, y)] = random.randint(20, current_hazard_lifetime)
     
     return new_hazards
 
@@ -116,14 +132,16 @@ while running:
     # 2. Randomly spawn new hazards during gameplay
     # We loop 3 times to potentially spawn up to 3 hazards per frame, maintaining mao density
     for _ in range(3):
-        if random.random() < 0.40: # 40% chance inside the loop
+        # Use the dynamic spawn chance controlled by the LLM
+        if random.random() < current_spawn_chance:
             # Pick a random grid coordinate
             hx = random.randrange(0, WINDOW_WIDTH, GRID_SIZE)
             hy = random.randrange(0, WINDOW_HEIGHT, GRID_SIZE)
 
             # Make sure ir doesn't spaws ON the player or where alrealdy exists
             if (hx, hy) != (player_x, player_y) and (hx, hy) not in hazards:
-                hazards[(hx, hy)] = HAZARD_LIFETIME
+                # Use the dynamic lifetime controlled by the LLM
+                hazards[(hx, hy)] = current_hazard_lifetime
 
 
     # KNOWLEDGE CICLE
@@ -150,6 +168,8 @@ while running:
     # 5. Assing Rewards and Move
     if is_deadly:
          reward = -100
+         deaths += 1
+         frames_survived = 0
          print(f"Crash AI Randomness (Epsilon): {agent.epsilon:.2f} | Resetting map...")
          player_x = START_X
          player_y = START_Y
@@ -157,6 +177,10 @@ while running:
 
     else:
          reward = 1 # Survived this step!
+         frames_survived += 1
+         if frames_survived > max_survival_time:
+              max_survival_time = frames_survived
+
          player_x, player_y = next_x, next_y # Actually move the character
 
     # 6. Observe the new state after moving
@@ -164,6 +188,25 @@ while running:
 
     # 7. TEACH THE BRAIN (Update the Q-Table)
     agent.learn(current_state, action, reward, next_state)
+
+    # 8. The Director Intervenes
+    frame_counter += 1
+    if frame_counter >= EVALUATION_INTERNAL:
+         print("\n --- LLM EVALUATION TRIGGERED ---")
+
+         # Call the Gemini API via out Director class
+         new_rules = director.evaluate_performance(deaths, max_survival_time, agent.epsilon)
+
+         # Apply the new rules returned by the LLM
+         current_spawn_chance = new_rules.get("spawn_chance", current_spawn_chance)
+         current_hazard_lifetime = new_rules.get("hazard_lifetime", current_hazard_lifetime)
+
+         # Reset the metrics for the new evaluation epoch
+         deaths = 0
+         max_survival_time = 0
+         frame_counter = 0
+         print("--------------------------------\n")
+
 
     # --------------------------------------
     # C. RENDERING (DRAWING TO SCREEN)
