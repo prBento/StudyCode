@@ -195,48 +195,62 @@ while running:
     if frame_counter >= current_eval_interval:
          print("\n --- LLM EVALUATION TRIGGERED ---")
 
-         # Call the Gemini API via out Director class
-         new_rules = director.evaluate_performance(deaths, max_survival_time, agent.epsilon)
+         # Rolagem de dados estilo RPG (D20)
+         agent_roll = random.randint(1, 20)
+         director_roll = random.randint(1, 20)
+         print(f"[CLASH] Agente rolou: {agent_roll} | Diretor rolou: {director_roll}")
 
-         # Apply the new rules returned by the LLM
-         new_spawn = new_rules.get("spawn_chance", current_spawn_chance)
-         new_lifetime = new_rules.get("hazard_lifetime", current_hazard_lifetime)
+         if agent_roll > director_roll:
+              print("[CLASH] Vitória do Agente! A intervenção foi bloqueada. Ganhando tempo para aprender...")
+              deaths = 0
+              max_survival_time = 0
+              frame_counter = 0
+              print("--------------------------------\n")
 
-         # --- DYNAMIC EPSILON SHOCK ---
-         spawn_increase = new_spawn - current_spawn_chance
+         else:              
+            print("[CLASH] Vitória do Diretor! Invocando a Groq para alterar a matriz...")
+            # Call the LLM API via out Director class
+            new_rules = director.evaluate_performance(deaths, max_survival_time, agent.epsilon)
 
-         if (spawn_increase > 0 or new_lifetime < current_hazard_lifetime) and agent.epsilon < 0.50:
-              # Math of shock: 0.10 base + 2 * increase hazard
-              extra_shock = max(0, spawn_increase) * 1.5
-              dynamic_shock = 0.05 + extra_shock
+            # Apply the new rules returned by the LLM
+            new_spawn = new_rules.get("spawn_chance", current_spawn_chance)
+            new_lifetime = new_rules.get("hazard_lifetime", current_hazard_lifetime)
 
-              dynamic_shock = min(dynamic_shock, 0.30)
+            # --- DYNAMIC EPSILON SHOCK ---
+            spawn_increase = new_spawn - current_spawn_chance
 
-              agent.epsilon = min(agent.epsilon + dynamic_shock, 0.85)
-              print(f"[ADAPTATION] O ambiente ficou hostil! Choque dinâmico de +{dynamic_shock:.2f}. Novo Epsilon: {agent.epsilon:.2f}")
-              
-         # Apply the new rules 
-         current_spawn_chance = new_spawn
-         current_hazard_lifetime = new_lifetime
+            if (spawn_increase > 0 or new_lifetime < current_hazard_lifetime) and agent.epsilon < 0.50:
+                # Math of shock: 0.10 base + 2 * increase hazard
+                extra_shock = max(0, spawn_increase) * 1.5
+                dynamic_shock = 0.05 + extra_shock
 
-         # --- Dynamic Pacing --- 
-         base_interval = 20 # 15 seconds base
+                dynamic_shock = min(dynamic_shock, 0.30)
 
-         if agent.epsilon > 0.5:
-              current_eval_interval = int(base_interval * 1.5)
-              print("[PACE] Ia está explorando. O Diretor vai esperar mais tempo antes de mudar o mapa de novo")
-         elif agent.epsilon < 0.2:
-              current_eval_interval = int(base_interval * 0.7)
-              print("[PACE] Ia está confiante demais. A próxima mudança de mapa virá mais rápido")
-         else:
-              current_eval_interval = base_interval
-    
+                agent.epsilon = min(agent.epsilon + dynamic_shock, 0.85)
+                print(f"[ADAPTATION] O ambiente ficou hostil! Choque dinâmico de +{dynamic_shock:.2f}. Novo Epsilon: {agent.epsilon:.2f}")
+                
+            # Apply the new rules 
+            current_spawn_chance = new_spawn
+            current_hazard_lifetime = new_lifetime
 
-         # Reset the metrics for the new evaluation epoch
-         deaths = 0
-         max_survival_time = 0
-         frame_counter = 0
-         print("--------------------------------\n")
+            # --- Dynamic Pacing --- 
+            base_interval = 20 # 15 seconds base
+
+            if agent.epsilon > 0.5:
+                current_eval_interval = int(base_interval * 1.5)
+                print("[PACE] Ia está explorando. O Diretor vai esperar mais tempo antes de mudar o mapa de novo")
+            elif agent.epsilon < 0.2:
+                current_eval_interval = int(base_interval * 0.7)
+                print("[PACE] Ia está confiante demais. A próxima mudança de mapa virá mais rápido")
+            else:
+                current_eval_interval = base_interval
+        
+
+            # Reset the metrics for the new evaluation epoch
+            deaths = 0
+            max_survival_time = 0
+            frame_counter = 0
+            print("--------------------------------\n")
 
 
     # --------------------------------------
