@@ -57,7 +57,7 @@ frames_survived = 0
 max_survival_time = 0
 
 # Director evaluation timer
-current_eval_interval = 150 # 5 FPS, 150 frames = 30 seconds in real world
+current_eval_interval = 20 # 2 FPS, 20 frames = 10 seconds in real world
 frame_counter = 0
 
 def get_state(x, y, hazards_lists):
@@ -131,17 +131,17 @@ while running:
 
     # 2. Randomly spawn new hazards during gameplay
     # We loop 3 times to potentially spawn up to 3 hazards per frame, maintaining mao density
-    for _ in range(3):
+    # for _ in range(3):
         # Use the dynamic spawn chance controlled by the LLM
-        if random.random() < current_spawn_chance:
-            # Pick a random grid coordinate
-            hx = random.randrange(0, WINDOW_WIDTH, GRID_SIZE)
-            hy = random.randrange(0, WINDOW_HEIGHT, GRID_SIZE)
+    if random.random() < current_spawn_chance:
+        # Pick a random grid coordinate
+        hx = random.randrange(0, WINDOW_WIDTH, GRID_SIZE)
+        hy = random.randrange(0, WINDOW_HEIGHT, GRID_SIZE)
 
-            # Make sure ir doesn't spaws ON the player or where alrealdy exists
-            if (hx, hy) != (player_x, player_y) and (hx, hy) not in hazards:
-                # Use the dynamic lifetime controlled by the LLM
-                hazards[(hx, hy)] = current_hazard_lifetime
+        # Make sure ir doesn't spaws ON the player or where alrealdy exists
+        if (hx, hy) != (player_x, player_y) and (hx, hy) not in hazards:
+            # Use the dynamic lifetime controlled by the LLM
+            hazards[(hx, hy)] = current_hazard_lifetime
 
 
     # KNOWLEDGE CICLE
@@ -201,16 +201,23 @@ while running:
          new_spawn = new_rules.get("spawn_chance", current_spawn_chance)
          new_lifetime = new_rules.get("hazard_lifetime", current_hazard_lifetime)
 
+         # --- DYNAMIC EPSILON SHOCK ---
+         spawn_increase = new_spawn - current_spawn_chance
+
          if new_spawn > current_spawn_chance or new_lifetime < current_hazard_lifetime:
-              agent.epsilon = min(agent.epsilon + 0.3, 1.0)
-              print(f"[ADAPTATION] O ambiente ficou hostil! Choque de Epsilon aplicado: {agent.epsilon:.2f}")
+              # Math of shock: 0.10 base + 2 * increase hazard
+              extra_shock = max(0, spawn_increase) * 2.0
+              dynamic_shock = 0.10 + extra_shock
+
+              agent.epsilon = min(agent.epsilon + dynamic_shock, 1.0)
+              print(f"[ADAPTATION] O ambiente ficou hostil! Choque dinâmico de +{dynamic_shock:.2f}. Novo Epsilon: {agent.epsilon:.2f}")
               
          # Apply the new rules 
          current_spawn_chance = new_spawn
          current_hazard_lifetime = new_lifetime
 
          # --- Dynamic Pacing --- 
-         base_interval = 150 # 30 seconds base
+         base_interval = 20 # 15 seconds base
 
          if agent.epsilon > 0.5:
               current_eval_interval = int(base_interval * 1.5)
