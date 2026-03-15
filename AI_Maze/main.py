@@ -88,8 +88,9 @@ def generate_maze():
                
                # 20% chance to spawn a hazard in the current block
                if random.random() < 0.20:
-                    # Set the key (x, y) with a random initial lifetime value
-                    new_hazards[(x, y)] = random.randint(20, current_hazard_lifetime)
+                    # Tempo de vida proporcional. Evita erro de range vazio.
+                    min_life = max(1, int(current_hazard_lifetime * 0.5))
+                    new_hazards[(x, y)] = random.randint(min_life, current_hazard_lifetime)
     
     return new_hazards
 
@@ -204,12 +205,14 @@ while running:
          # --- DYNAMIC EPSILON SHOCK ---
          spawn_increase = new_spawn - current_spawn_chance
 
-         if new_spawn > current_spawn_chance or new_lifetime < current_hazard_lifetime:
+         if (spawn_increase > 0 or new_lifetime < current_hazard_lifetime) and agent.epsilon < 0.50:
               # Math of shock: 0.10 base + 2 * increase hazard
-              extra_shock = max(0, spawn_increase) * 2.0
-              dynamic_shock = 0.10 + extra_shock
+              extra_shock = max(0, spawn_increase) * 1.5
+              dynamic_shock = 0.05 + extra_shock
 
-              agent.epsilon = min(agent.epsilon + dynamic_shock, 1.0)
+              dynamic_shock = min(dynamic_shock, 0.30)
+
+              agent.epsilon = min(agent.epsilon + dynamic_shock, 0.85)
               print(f"[ADAPTATION] O ambiente ficou hostil! Choque dinâmico de +{dynamic_shock:.2f}. Novo Epsilon: {agent.epsilon:.2f}")
               
          # Apply the new rules 
