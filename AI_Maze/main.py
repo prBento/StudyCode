@@ -10,7 +10,7 @@ from director import GameDirector
 WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 600
 GRID_SIZE = 40          # The world is divided into 40x40 pixel blocks
-FPS = 10                # Game speed slowled down to watch de AI learn
+FPS = 2                # Game speed slowled down to watch de AI learn
 
 
 # RGB Color Definitions
@@ -57,7 +57,7 @@ frames_survived = 0
 max_survival_time = 0
 
 # Director evaluation timer
-EVALUATION_INTERNAL = 600 # The LLM will evaluate the game every 300 frames
+current_eval_interval = 150 # 5 FPS, 150 frames = 30 seconds in real world
 frame_counter = 0
 
 def get_state(x, y, hazards_lists):
@@ -191,15 +191,36 @@ while running:
 
     # 8. The Director Intervenes
     frame_counter += 1
-    if frame_counter >= EVALUATION_INTERNAL:
+    if frame_counter >= current_eval_interval:
          print("\n --- LLM EVALUATION TRIGGERED ---")
 
          # Call the Gemini API via out Director class
          new_rules = director.evaluate_performance(deaths, max_survival_time, agent.epsilon)
 
          # Apply the new rules returned by the LLM
-         current_spawn_chance = new_rules.get("spawn_chance", current_spawn_chance)
-         current_hazard_lifetime = new_rules.get("hazard_lifetime", current_hazard_lifetime)
+         new_spawn = new_rules.get("spawn_chance", current_spawn_chance)
+         new_lifetime = new_rules.get("hazard_lifetime", current_hazard_lifetime)
+
+         if new_spawn > current_spawn_chance or new_lifetime < current_hazard_lifetime:
+              agent.epsilon = min(agent.epsilon + 0.3, 1.0)
+              print(f"[ADAPTATION] O ambiente ficou hostil! Choque de Epsilon aplicado: {agent.epsilon:.2f}")
+              
+         # Apply the new rules 
+         current_spawn_chance = new_spawn
+         current_hazard_lifetime = new_lifetime
+
+         # --- Dynamic Pacing --- 
+         base_interval = 150 # 30 seconds base
+
+         if agent.epsilon > 0.5:
+              current_eval_interval = int(base_interval * 1.5)
+              print("[PACE] Ia está explorando. O Diretor vai esperar mais tempo antes de mudar o mapa de novo")
+         elif agent.epsilon < 0.2:
+              current_eval_interval = int(base_interval * 0.7)
+              print("[PACE] Ia está confiante demais. A próxima mudança de mapa virá mais rápido")
+         else:
+              current_eval_interval = base_interval
+    
 
          # Reset the metrics for the new evaluation epoch
          deaths = 0
