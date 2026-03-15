@@ -8,6 +8,7 @@
 - [ ] **Spawn Protection (Pathfinding):** Implement an algorithm (like A* or Flood Fill) to ensure the player never spawns completely enclosed by hazards. There must always be a valid path/escape.
 - [ ] **Torus Topology (Pac-Man Effect):** Allow the player to cross the screen borders and appear on the opposite side.
 - [ ] **Dynamic Grid Size:** Increase the grid resolution (smaller blocks, larger map) for a more complex maze.
+- [ ] **Graceful Degradation (API Fallback):** Implement a "Last Known Good State" memory. If the LLM API drops or times out, the Director should not reset to default difficulty, but instead maintain the last valid rules received until the connection is restored.
 
 ### 🎨 Graphics & Polish
 - [ ] **Sprite Integration:** Replace the basic Pygame rectangles with actual 2D sprites (e.g., an indie-style character, textured walls, and animated hazards).
@@ -23,6 +24,7 @@
 - [ ] **Proteção de Spawn (Pathfinding):** Implementar um algoritmo (como A* ou Flood Fill) para garantir que o jogador nunca nasça completamente cercado por perigos. Deve sempre haver um caminho válido/rota de fuga.
 - [ ] **Topologia Toroide (Efeito Pac-Man):** Permitir que o jogador atravesse as bordas da tela e apareça no lado oposto.
 - [ ] **Tamanho Dinâmico da Grade:** Aumentar a resolução da grade (blocos menores, mapa maior) para um labirinto mais complexo.
+- [ ] **Degradação Graciosa (Fallback da API):** Implementar uma memória de "Último Estado Bom Conhecido". Se a API do LLM cair ou der timeout, o Diretor não deve resetar para a dificuldade padrão, mas sim manter as últimas regras válidas recebidas até que a conexão seja restaurada.
 
 ### 🎨 Gráficos & Polimento
 - [ ] **Integração de Sprites:** Substituir os retângulos básicos do Pygame por sprites 2D reais (ex: um personagem estilo indie, paredes texturizadas e perigos animados).
