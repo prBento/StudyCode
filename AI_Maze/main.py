@@ -32,6 +32,9 @@ pygame.display.set_caption("Hybrid AI Maze")
 # Creates an object to help track time and frame rate
 clock = pygame.time.Clock()
 
+font_main = pygame.font.SysFont('Arial', 24, bold=True)
+font_small = pygame.font.SysFont('Arial', 18)
+
 # ==========================================
 # 3. GAME STATE (VARIABLES)
 # ==========================================
@@ -276,6 +279,29 @@ while running:
 
     # 3. Draw the player rectangle onto the screen surface
     pygame.draw.rect(screen, BLUE, player_rect)
+
+    # --- DRAWNING THE HUD (Heads-Up Display) ---
+    # Agent (Canto Superior Esquerdo)
+    timer_text = font_main.render(f"Tempo Vivo: {frames_survived}", True, WHITE)
+    record_text = font_main.render(f"Record (High Score): {max_survival_time}", True, (255, 215, 0))
+    epsilon_text = font_small.render(f"Taxa de Exploração (Epsilon): {agent.epsilon:.2f}", True, (200, 200, 255))
+
+    # Director (Canto Superior Direito)
+    diff_title = font_small.render("Regras do Diretor LLM: ", True, (255, 150, 150))
+    spawn_info = font_main.render(f"Spawn de Perigo: {int(current_spawn_chance * 100)}%", True, RED)
+    life_info = font_main.render(f"Tempo de Vida: {current_hazard_lifetime} frames", True, RED)
+
+    # Desenhando os textos na tela usand .blit()
+    screen.blit(timer_text, (10, 10))
+    screen.blit(record_text, (10, 40))
+    screen.blit(epsilon_text, (10, 70))
+
+    # O X aqui é calcdulado para alinhar a direita
+    screen.blit(diff_title, (WINDOW_WIDTH - diff_title.get_width() - 10, 10))
+    screen.blit(spawn_info, (WINDOW_WIDTH - spawn_info.get_width() - 10, 35))
+    screen.blit(life_info, (WINDOW_WIDTH - life_info.get_width() - 10, 65))
+
+    # ------------------------------------------------------
 
     # 4. Swap the memory buffer with the display (makes drawings visible)
     pygame.display.flip()
