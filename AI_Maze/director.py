@@ -52,7 +52,7 @@ class GameDirector:
         {{
             "spawn_chance": <float_value>,
             "hazard_lifetime": <int_value>,
-            "reasoning": "<Write a short sentence in Brazilian Portuguese explaining why you chose these numbers. Max 60 characters!>"
+            "reasoning": "<Write a short sentence in English explaining why you chose these numbers. Max 60 characters!>"
         }}
         """
 

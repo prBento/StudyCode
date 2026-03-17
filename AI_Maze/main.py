@@ -12,18 +12,17 @@ WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 MAZE_WIDTH = WINDOW_WIDTH
 GRID_SIZE = 40          # The world is divided into 40x40 pixel blocks
-FPS = 2                # Game speed slowled down to watch de AI learn
-
+FPS = 2                 # Game speed slowed down to watch the AI learn
 
 # RGB Color Definitions
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 LIGHT_GRAY = (200, 200, 200)
 BLUE = (0, 100, 255)    # Agent
-RED = (200, 50, 50)       # Hazard/Perigo
+RED = (200, 50, 50)     # Hazard
 DARK_GREY = (30, 30, 30)
 
-# Convert frames in clock's time (MM:SS)
+# Convert frames into clock's time (MM:SS)
 def format_time(frames):
      total_seconds = frames // FPS
      minutes = total_seconds // 60
@@ -43,8 +42,8 @@ pygame.display.set_caption("Hybrid AI Maze")
 # Creates an object to help track time and frame rate
 clock = pygame.time.Clock()
 
-font_main = pygame.font.SysFont('Arial', 16, bold=True)
-font_small = pygame.font.SysFont('Arial', 14)
+font_main = pygame.font.SysFont('Consolas', 18, bold=True)
+font_small = pygame.font.SysFont('Consolas', 15)
 
 # ==========================================
 # 3. GAME STATE (VARIABLES)
@@ -53,7 +52,7 @@ font_small = pygame.font.SysFont('Arial', 14)
 player_x = random.randrange(0, MAZE_WIDTH, GRID_SIZE)
 player_y = random.randrange(0, WINDOW_HEIGHT, GRID_SIZE)
 
-# Actions: 0=UP, 1=DOWN, 2=LEFT, 3-RIGHT
+# Actions: 0=UP, 1=DOWN, 2=LEFT, 3=RIGHT
 agent = QLearningAgent(actions=[0, 1, 2, 3])
 
 # AI Game Director & Metrics
@@ -62,7 +61,7 @@ director = GameDirector()
 # Mutable environment variables (controlled by the LLM)
 current_spawn_chance = 0.10
 current_hazard_lifetime = 50
-current_llm_reasoning = "Nenhuma intervenção ainda. IA explorando mapa inicial."
+current_llm_reasoning = "No intervention yet. AI is exploring the initial map."
 
 # Performance tracking metrics
 deaths = 0
@@ -111,7 +110,7 @@ def generate_maze(px, py):
                
                # 20% chance to spawn a hazard in the current block
                if random.random() < current_spawn_chance:
-                    # Tempo de vida proporcional. Evita erro de range vazio.
+                    # Proportional lifetime. Avoids empty range error.
                     min_life = max(1, int(current_hazard_lifetime * 0.5))
                     new_hazards[(x, y)] = random.randint(min_life, current_hazard_lifetime)
     
@@ -164,21 +163,18 @@ while running:
          del hazards[pos] # Delete the hazard from dictionary
 
     # 2. Randomly spawn new hazards during gameplay
-    # We loop 3 times to potentially spawn up to 3 hazards per frame, maintaining mao density
-    # for _ in range(3):
-        # Use the dynamic spawn chance controlled by the LLM
     if random.random() < current_spawn_chance:
         # Pick a random grid coordinate
         hx = random.randrange(0, MAZE_WIDTH, GRID_SIZE)
         hy = random.randrange(0, WINDOW_HEIGHT, GRID_SIZE)
 
-        # Make sure ir doesn't spaws ON the player or where alrealdy exists
+        # Make sure it doesn't spawn ON the player or where one already exists
         if (hx, hy) != (player_x, player_y) and (hx, hy) not in hazards:
             # Use the dynamic lifetime controlled by the LLM
             hazards[(hx, hy)] = current_hazard_lifetime
 
 
-    # KNOWLEDGE CICLE
+    # KNOWLEDGE CYCLE
     # 1. Observe the current state (Radar)
     current_state = get_state(player_x, player_y, hazards)
 
@@ -192,14 +188,14 @@ while running:
     elif action == 2: next_x -= GRID_SIZE   # LEFT
     elif action == 3: next_x += GRID_SIZE   # RIGHT
 
-    # 4. Check if the planned move is deadly (wall or red bloack)
+    # 4. Check if the planned move is deadly (wall or hazard block)
     is_deadly = False
     if next_x < 0 or next_x >= MAZE_WIDTH or next_y < 0 or next_y >= WINDOW_HEIGHT:
          is_deadly = True # Hit a boundary wall
     elif (next_x, next_y) in hazards:
          is_deadly = True # Hit a red hazard
 
-    # 5. Assing Rewards and Move
+    # 5. Assign Rewards and Move
     if is_deadly:
          if frames_survived > global_high_score:
               global_high_score = frames_survived
@@ -207,10 +203,10 @@ while running:
          reward = -100
          deaths += 1
          frames_survived = 0
-         print(f"Crash AI Randomness (Epsilon): {agent.epsilon:.2f} | Resetting map...")
+         print(f"Crash! AI Randomness (Epsilon): {agent.epsilon:.2f} | Resetting map...")
          player_x = random.randrange(0, MAZE_WIDTH, GRID_SIZE)
          player_y = random.randrange(0, WINDOW_HEIGHT, GRID_SIZE)
-         hazards = generate_maze(player_x, player_y) # Rebuild de world on death
+         hazards = generate_maze(player_x, player_y) # Rebuild the world on death
 
     else:
          reward = 1 # Survived this step!
@@ -232,58 +228,57 @@ while running:
     if frame_counter >= current_eval_interval:
          print("\n --- LLM EVALUATION TRIGGERED ---")
 
-         # Rolagem de dados estilo RPG (D20)
+         # RPG style dice roll (D20)
          agent_roll = random.randint(1, 20)
          director_roll = random.randint(1, 20)
-         print(f"[CLASH] Agente rolou: {agent_roll} | Diretor rolou: {director_roll}")
+         print(f"[CLASH] Agent rolled: {agent_roll} | Director rolled: {director_roll}")
 
          if agent_roll > director_roll:
-              print("[CLASH] Vitória do Agente! A intervenção foi bloqueada. Ganhando tempo para aprender...")
+              print("[CLASH] Agent Wins! Intervention blocked. Gaining time to learn...")
               deaths = 0
               max_survival_time = 0
               frame_counter = 0
               print("--------------------------------\n")
 
          else:              
-            print("[CLASH] Vitória do Diretor! Invocando a Groq para alterar a matriz...")
-            # Call the LLM API via out Director class
+            print("[CLASH] Director Wins! Invoking Groq to alter the matrix...")
+            # Call the LLM API via our Director class
             new_rules = director.evaluate_performance(deaths, max_survival_time, agent.epsilon)
 
             # Apply the new rules returned by the LLM
             new_spawn = new_rules.get("spawn_chance", current_spawn_chance)
             new_lifetime = new_rules.get("hazard_lifetime", current_hazard_lifetime)
-            current_llm_reasoning = new_rules.get("reasoning", "Ajuste de dificuldade padrão.")
+            current_llm_reasoning = new_rules.get("reasoning", "Default difficulty adjustment.")
 
             # --- DYNAMIC EPSILON SHOCK ---
             spawn_increase = new_spawn - current_spawn_chance
 
             if (spawn_increase > 0 or new_lifetime < current_hazard_lifetime) and agent.epsilon < 0.50:
-                # Math of shock: 0.10 base + 2 * increase hazard
+                # Math of shock: 0.10 base + 1.5 * hazard increase
                 extra_shock = max(0, spawn_increase) * 1.5
                 dynamic_shock = 0.05 + extra_shock
 
                 dynamic_shock = min(dynamic_shock, 0.30)
 
                 agent.epsilon = min(agent.epsilon + dynamic_shock, 0.85)
-                print(f"[ADAPTATION] O ambiente ficou hostil! Choque dinâmico de +{dynamic_shock:.2f}. Novo Epsilon: {agent.epsilon:.2f}")
+                print(f"[ADAPTATION] Hostile environment! Dynamic shock of +{dynamic_shock:.2f}. New Epsilon: {agent.epsilon:.2f}")
                 
             # Apply the new rules 
             current_spawn_chance = new_spawn
             current_hazard_lifetime = new_lifetime
 
             # --- Dynamic Pacing --- 
-            base_interval = 20 # 15 seconds base
+            base_interval = 20 # 10 seconds base (at 2 FPS)
 
             if agent.epsilon > 0.5:
                 current_eval_interval = int(base_interval * 1.5)
-                print("[PACE] Ia está explorando. O Diretor vai esperar mais tempo antes de mudar o mapa de novo")
+                print("[PACE] AI is exploring. The Director will wait longer before changing the map.")
             elif agent.epsilon < 0.2:
                 current_eval_interval = int(base_interval * 0.7)
-                print("[PACE] Ia está confiante demais. A próxima mudança de mapa virá mais rápido")
+                print("[PACE] AI is too confident. The next map change will come sooner.")
             else:
                 current_eval_interval = base_interval
         
-
             # Reset the metrics for the new evaluation epoch
             deaths = 0
             max_survival_time = 0
@@ -302,56 +297,62 @@ while running:
          hazard_rect = (h_x, h_y, GRID_SIZE, GRID_SIZE)
          pygame.draw.rect(screen, RED, hazard_rect)
 
-    # 2. Define de player's shape and position (X, Y, Width, Height)
+    # 2. Define the player's shape and position (X, Y, Width, Height)
     player_rect = (player_x, player_y, GRID_SIZE, GRID_SIZE)
 
     # 3. Draw the player rectangle onto the screen surface
     pygame.draw.rect(screen, BLUE, player_rect)
 
-    # --- DRAWNING THE HUD (Heads-Up Display) ---
-    # A. Tamanho atual da janela
+    # --- DRAWING THE HUD (Heads-Up Display) ---
+    # A. Current window size
     current_w, current_h = screen.get_size()
-    hud_height = 95 # Altura do painel inferior
+    hud_height = 95 # Bottom panel height
 
-    # B. Camada semi transparente
+    # B. Semi-transparent layer
     hud_surface = pygame.Surface((current_w, hud_height))
-    hud_surface.set_alpha(220) # 0 é invisível, 255 é sólido, 20 dá um fundo escuro
+    hud_surface.set_alpha(220) # 0 is invisible, 255 is solid, 220 gives a dark background
     hud_surface.fill(BLACK)
 
-    # C. Camada transparente no fundo da tela
+    # C. Draw the transparent layer at the bottom of the screen
     screen.blit(hud_surface, (0, current_h - hud_height))
 
-    # D. Linha divisória sútil no topo da HUD
+    # D. Subtle dividing line at the top of the HUD
     pygame.draw.line(screen, LIGHT_GRAY, (0, current_h - hud_height), (current_w, current_h - hud_height), 1)
 
-    # E. Organizando os textos na horizontal (3 colunas)
-    pad_y = current_h - hud_height + 15 # Margem superior
+    # E. Organizing text horizontally (3 columns)
+    pad_y = current_h - hud_height + 15 # Top margin
 
-    # F. Título do agente
+    # F. Agent Status Column
     col1_x = 20
-    screen.blit(font_main.render("Q-Learning AI Agent", True, WHITE), (col1_x, pad_y))
-    screen.blit(font_main.render(f"Tempo Atual: {format_time(frames_survived)}", True, LIGHT_GRAY), (col1_x, pad_y + 26))
-    screen.blit(font_main.render(f"Record: {format_time(global_high_score)}", True, (200, 180, 50)), (col1_x, pad_y + 48))
-    pygame.draw.line(screen, (70, 70, 70), (200, pad_y), (200, current_h - 15), 1)
+    screen.blit(font_main.render("Q-Learning AI", True, WHITE), (col1_x, pad_y))
+    screen.blit(font_main.render(f"Time: {format_time(frames_survived)}", True, LIGHT_GRAY), (col1_x, pad_y + 26))
+    screen.blit(font_main.render(f"High Score: {format_time(global_high_score)}", True, (255, 215, 0)), (col1_x, pad_y + 48))
+    pygame.draw.line(screen, (70, 70, 70), (240, pad_y), (240, current_h - 15), 1)
     
-    # G. LLM
-    col2_x = 220 # Center
-    screen.blit(font_main.render("Groq (LLM) - Regras", True, WHITE), (col2_x, pad_y))
-    screen.blit(font_main.render(f"Epsilon: {agent.epsilon:.2f} Exploração", True, LIGHT_GRAY), (col2_x, pad_y + 26))
-    screen.blit(font_small.render(f"Dificuldade Atual: {int(current_spawn_chance * 100)}% Spawn", True, RED), (col2_x, pad_y + 48))
-    pygame.draw.line(screen, (70, 70, 70), (420, pad_y), (420, current_h - 15), 1)
+    # G. LLM Director Column
+    col2_x = 260
+    screen.blit(font_main.render("LLM Decision Rules (Groq)", True, WHITE), (col2_x, pad_y))
+    screen.blit(font_main.render(f"Exploration (Epsilon): {agent.epsilon:.2f}", True, LIGHT_GRAY), (col2_x, pad_y + 26))
+    screen.blit(font_small.render(f"Spawn Rate: {int(current_spawn_chance * 100)}%", True, (255, 100, 100)), (col2_x, pad_y + 48))
+    pygame.draw.line(screen, (70, 70, 70), (580, pad_y), (580, current_h - 15), 1)
 
-    # H. XAI Logs
-    col3_x = 440 # Right
-    screen.blit(font_main.render("Log de Decisões Groq (LLM)", True, WHITE), (col3_x, pad_y))
+    # H. XAI Logs Column
+    col3_x = 600
+    log_title = font_main.render("Groq Decision Log", True, WHITE)
+    screen.blit(log_title, (col3_x, pad_y))
 
-    # H1. Quebra o texto da LL em linhas de no máximo 50 char
-    wrapped_reasoning = textwrap.wrap(current_llm_reasoning, width=85)
+    tag_x = col3_x + log_title.get_width() + 10
+    
+    xai_tag = font_small.render("• Natural Language Translation", True, (100, 200, 255)) # Ciano
+    screen.blit(xai_tag, (tag_x, pad_y + 2))
 
-    # H2. Desenha cada linha uma debaixo da outra
+    # H1. Wraps LLM text into lines of max 85 characters
+    wrapped_reasoning = textwrap.wrap(current_llm_reasoning, width=70)
+
+    # H2. Draws each line one below the other
     for i, line in enumerate(wrapped_reasoning):
-        texto_renderizado = font_small.render(line, True, (150, 255, 150))
-        screen.blit(texto_renderizado, (col3_x, pad_y + 22 + (i * 20)))
+        texto_renderizado = font_small.render(line, True, (180, 255, 180))
+        screen.blit(texto_renderizado, (col3_x, pad_y + 26 + (i * 20)))
 
     # ------------------------------------------------------
 
