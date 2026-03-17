@@ -7,10 +7,9 @@ from director import GameDirector
 # ====================================
 # 1. CONFIGURATION & CONSTANTS
 # ====================================
-MAZE_WIDTH = 800
-UI_WIDTH = 300
-WINDOW_WIDTH = MAZE_WIDTH + UI_WIDTH # 1100px
-WINDOW_HEIGHT = 600
+WINDOW_WIDTH = 1280
+WINDOW_HEIGHT = 720
+MAZE_WIDTH = WINDOW_WIDTH
 GRID_SIZE = 40          # The world is divided into 40x40 pixel blocks
 FPS = 2                # Game speed slowled down to watch de AI learn
 
@@ -18,8 +17,9 @@ FPS = 2                # Game speed slowled down to watch de AI learn
 # RGB Color Definitions
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
+LIGHT_GRAY = (200, 200, 200)
 BLUE = (0, 100, 255)    # Agent
-RED = (255, 0, 0)       # Hazard/Perigo
+RED = (200, 50, 50)       # Hazard/Perigo
 DARK_GREY = (30, 30, 30)
 
 # Convert frames in clock's time (MM:SS)
@@ -36,7 +36,7 @@ def format_time(frames):
 pygame.init()
 
 # Creates the game window and sets the title
-screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.RESIZABLE)
 pygame.display.set_caption("Hybrid AI Maze")
 
 # Creates an object to help track time and frame rate
@@ -189,6 +189,9 @@ while running:
 
     # 5. Assing Rewards and Move
     if is_deadly:
+         if frames_survived > global_high_score:
+              global_high_score = frames_survived
+
          reward = -100
          deaths += 1
          frames_survived = 0
@@ -202,9 +205,7 @@ while running:
          frames_survived += 1
 
          if frames_survived > max_survival_time:
-              max_survival_time = frames_survived
-         if frames_survived > global_high_score:
-              global_high_score = frames_survived
+              max_survival_time = frames_survived         
 
          player_x, player_y = next_x, next_y # Actually move the character
 
@@ -295,43 +296,39 @@ while running:
     pygame.draw.rect(screen, BLUE, player_rect)
 
     # --- DRAWNING THE HUD (Heads-Up Display) ---
-    # A. Fundo do painel lateral
-    ui_rect = (MAZE_WIDTH, 0, UI_WIDTH, WINDOW_HEIGHT)
-    pygame.draw.rect(screen, DARK_GREY, ui_rect)
+    # A. Tamanho atual da janela
+    current_w, current_h = screen.get_size()
+    hud_height = 100 # Altura do painel inferior
 
-    # B. Linha separando o labirinto
-    pygame.draw.line(screen, WHITE, (MAZE_WIDTH, 0), (MAZE_WIDTH, WINDOW_HEIGHT), 2)
+    # B. Camada semi transparente
+    hud_surface = pygame.Surface((current_w, hud_height))
+    hud_surface.set_alpha(220) # 0 é invisível, 255 é sólido, 20 dá um fundo escuro
+    hud_surface.fill(BLACK)
 
-    # C. Margem para os textos dentro do painel
-    pad_x = MAZE_WIDTH + 20
+    # C. Camada transparente no fundo da tela
+    screen.blit(hud_surface, (0, current_h - hud_height))
 
-    # D. Título do agente
-    title_agent = font_main.render("STATUS DO AGENTE", True, BLUE)
-    screen.blit(title_agent, (pad_x, 20))
+    # D. Linha divisória sútil no topo da HUD
+    pygame.draw.line(screen, LIGHT_GRAY, (0, current_h - hud_height), (current_w, current_h - hud_height), 1)
 
-    # E. Tempos formatados em MM:SS
-    str_time = format_time(frames_survived)
-    str_record = format_time(global_high_score)
+    # E. Organizando os textos na horizontal (3 colunas)
+    pad_y = current_h - hud_height + 15 # Margem superior
 
-    screen.blit(font_main.render(f"Tempo Atual: {str_time}", True, WHITE), (pad_x, 60))
-    screen.blit(font_main.render(f"Record: {str_record}", True, (255, 215, 0)), (pad_x, 90))
-    screen.blit(font_small.render(f"Epsilon (Aleatório): {agent.epsilon:.2f}", True, (200, 200, 255)), (pad_x, 130))
+    # F. Título do agente
+    screen.blit(font_main.render("Status do Agente", True, WHITE), (20, pad_y))
+    screen.blit(font_main.render(f"Tempo Atual: {format_time(frames_survived)}", True, LIGHT_GRAY), (20, pad_y + 30))
+    screen.blit(font_main.render(f"Record: {format_time(global_high_score)}", True, (200, 180, 50)), (20, pad_y + 50))
+    
+    # G. LLM
+    col2_x = current_w // 2 - 100 # Center
+    screen.blit(font_main.render("Groq (LLM)", True, WHITE), (col2_x, pad_y))
+    screen.blit(font_main.render(f"Epsilon: {agent.epsilon:.2f} Exploração", True, LIGHT_GRAY), (col2_x, pad_y + 30))
+    screen.blit(font_small.render(f"Dificuldade Atual: {int(current_spawn_chance * 100)}% Spawn", True, RED), (col2_x, pad_y + 50))
 
-    # F. Linha do Diretor
-    pygame.draw.line(screen, (100, 100, 100), (pad_x, 170), (WINDOW_WIDTH - 20, 170), 1)
-    title_llm = font_main.render("Diretor LLM", True, (255, 100, 100))
-    screen.blit(title_llm, (pad_x, 190))
-
-    screen.blit(font_small.render(f"Chance de Spawn: {int(current_spawn_chance * 100)}%", True, RED), (pad_x, 230))
-
-    # G. Tempo de vida dos perigos
-    life_seconds = current_hazard_lifetime // FPS
-    screen.blit(font_small.render(f"Vida do Perigo: {life_seconds}s", True, RED), (pad_x, 260))
-
-    # H. Espaço reservado para o futuro XAI log
-    pygame.draw.line(screen, (100, 100, 100), (pad_x, 300), (WINDOW_WIDTH - 20, 300), 1)
-    screen.blit(font_small.render("Última decisão LLM:", True, (150, 255, 150)), (pad_x, 320))
-    screen.blit(font_small.render("(Aguardando Logs...)", True, (100, 150, 100)), (pad_x, 350))
+    # H. XAI Logs
+    col3_x = current_w - 300 # Right
+    screen.blit(font_main.render("Log de Decisões", True, WHITE), (col3_x, pad_y))
+    screen.blit(font_main.render("Aguardando balões de pensamento...", True, (100,150,100)), (col3_x, pad_y + 30))
 
     # ------------------------------------------------------
 
