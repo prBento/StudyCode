@@ -42,8 +42,8 @@ pygame.display.set_caption("Hybrid AI Maze")
 # Creates an object to help track time and frame rate
 clock = pygame.time.Clock()
 
-font_main = pygame.font.SysFont('Arial', 24, bold=True)
-font_small = pygame.font.SysFont('Arial', 18)
+font_main = pygame.font.SysFont('Arial', 16, bold=True)
+font_small = pygame.font.SysFont('Arial', 14)
 
 # ==========================================
 # 3. GAME STATE (VARIABLES)
@@ -135,6 +135,16 @@ while running:
         # if the user click the "X" button on the window
         if event.type == pygame.QUIT:
             running = False
+        
+        elif event.type == pygame.VIDEORESIZE:
+             WINDOW_WIDTH = event.w
+             WINDOW_HEIGHT = event.h
+             MAZE_WIDTH = WINDOW_WIDTH
+
+             screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.RESIZABLE)
+
+             if player_x >= MAZE_WIDTH: player_x = MAZE_WIDTH - GRID_SIZE
+             if player_y >= WINDOW_HEIGHT: player_y = WINDOW_HEIGHT - GRID_SIZE
     
     # --------------------------------------
     # B. GAME LOGIC UPDATE (THE AI BRAIN)
@@ -298,7 +308,7 @@ while running:
     # --- DRAWNING THE HUD (Heads-Up Display) ---
     # A. Tamanho atual da janela
     current_w, current_h = screen.get_size()
-    hud_height = 100 # Altura do painel inferior
+    hud_height = 90 # Altura do painel inferior
 
     # B. Camada semi transparente
     hud_surface = pygame.Surface((current_w, hud_height))
@@ -315,20 +325,21 @@ while running:
     pad_y = current_h - hud_height + 15 # Margem superior
 
     # F. Título do agente
-    screen.blit(font_main.render("Status do Agente", True, WHITE), (20, pad_y))
-    screen.blit(font_main.render(f"Tempo Atual: {format_time(frames_survived)}", True, LIGHT_GRAY), (20, pad_y + 30))
-    screen.blit(font_main.render(f"Record: {format_time(global_high_score)}", True, (200, 180, 50)), (20, pad_y + 50))
+    col1_x = 20
+    screen.blit(font_main.render("Status do Agente", True, WHITE), (col1_x, pad_y))
+    screen.blit(font_main.render(f"Tempo Atual: {format_time(frames_survived)}", True, LIGHT_GRAY), (col1_x, pad_y + 25))
+    screen.blit(font_main.render(f"Record: {format_time(global_high_score)}", True, (200, 180, 50)), (col1_x, pad_y + 50))
     
     # G. LLM
-    col2_x = current_w // 2 - 100 # Center
+    col2_x = 280 # Center
     screen.blit(font_main.render("Groq (LLM)", True, WHITE), (col2_x, pad_y))
-    screen.blit(font_main.render(f"Epsilon: {agent.epsilon:.2f} Exploração", True, LIGHT_GRAY), (col2_x, pad_y + 30))
+    screen.blit(font_main.render(f"Epsilon: {agent.epsilon:.2f} Exploração", True, LIGHT_GRAY), (col2_x, pad_y + 25))
     screen.blit(font_small.render(f"Dificuldade Atual: {int(current_spawn_chance * 100)}% Spawn", True, RED), (col2_x, pad_y + 50))
 
     # H. XAI Logs
-    col3_x = current_w - 300 # Right
+    col3_x = 580 # Right
     screen.blit(font_main.render("Log de Decisões", True, WHITE), (col3_x, pad_y))
-    screen.blit(font_main.render("Aguardando balões de pensamento...", True, (100,150,100)), (col3_x, pad_y + 30))
+    screen.blit(font_main.render("Aguardando balões de pensamento...", True, (100,150,100)), (col3_x, pad_y + 25))
 
     # ------------------------------------------------------
 
