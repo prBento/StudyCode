@@ -205,6 +205,22 @@ while running:
          deaths += 1
          frames_survived = 0
          print(f"Crash! AI Randomness (Epsilon): {agent.epsilon:.2f} | Resetting map...")
+        
+         # Calcula o centro do bloco que causou a morte
+         crash_x = next_x + (GRID_SIZE // 2)
+         crash_y = next_y + (GRID_SIZE // 2)
+
+         # Desenha uma explosão
+         pygame.draw.circle(screen, (255, 100, 0), (crash_x, crash_y), 30) # Explosão externa
+         pygame.draw.circle(screen, (255, 255, 255), (crash_x, crash_y), 15) # Núcleo quente
+
+         # Força a tela a desenha a explosão imediatamente
+         pygame.display.flip()
+
+         # Congela por 400 milissegundos
+         pygame.time.delay(400)
+         
+
          player_x = random.randrange(0, MAZE_WIDTH, GRID_SIZE)
          player_y = random.randrange(0, WINDOW_HEIGHT, GRID_SIZE)
          hazards = generate_maze(player_x, player_y) # Rebuild the world on death
