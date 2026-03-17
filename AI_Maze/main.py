@@ -2,6 +2,7 @@ import pygame
 import sys
 import random
 import textwrap
+import math
 from agent import QLearningAgent
 from director import GameDirector
 
@@ -290,18 +291,63 @@ while running:
     # C. RENDERING (DRAWING TO SCREEN)
     # --------------------------------------
     # 1. Clear the screen from the previous frame
-    screen.fill(BLACK)
+    screen.fill((15, 15, 20))
+
+    time_now = pygame.time.get_ticks()
+    pulse = (math.sin(time_now / 200.0) + 1) / 2.0
 
     # Draw all hazards using a loop
     for h_x, h_y in hazards:
-         hazard_rect = (h_x, h_y, GRID_SIZE, GRID_SIZE)
-         pygame.draw.rect(screen, RED, hazard_rect)
+         center_x = h_x + (GRID_SIZE // 2)
+         center_y = h_y + (GRID_SIZE // 2)
 
-    # 2. Define the player's shape and position (X, Y, Width, Height)
-    player_rect = (player_x, player_y, GRID_SIZE, GRID_SIZE)
+         time_offset = h_x + h_y
+         mine_pulse = (math.sin((time_now + time_offset * 5) / 150.0) + 1) / 2.0
+         
+         glow_radius = int(10 + (mine_pulse * 6)) 
+         
+         # Base escura da mina
+         pygame.draw.circle(screen, (80, 20, 20), (center_x, center_y), 16)
+         
+         # Brilho de energia (Pulsação)
+         pygame.draw.circle(screen, (255, 50, 50), (center_x, center_y), glow_radius)
+         
+         # Núcleo de calor (Amarelo/Branco)
+         pygame.draw.circle(screen, (255, 200, 100), (center_x, center_y), 6) 
+         
+         # Detalhe técnico: um "X" marcando a mina
+         pygame.draw.line(screen, (255, 100, 100), (h_x + 8, h_y + 8), (h_x + GRID_SIZE - 8, h_y + GRID_SIZE - 8), 2)
+         pygame.draw.line(screen, (255, 100, 100), (h_x + GRID_SIZE - 8, h_y + 8), (h_x + 8, h_y + GRID_SIZE - 8), 2) 
+         
+    # Robot
+    # Esteiras/Rodas laterais
+    pygame.draw.rect(screen, (100, 100, 100), (player_x + 4, player_y + 14, 6, 20), border_radius=3)
+    pygame.draw.rect(screen, (100, 100, 100), (player_x + 30, player_y + 14, 6, 20), border_radius=3)
 
-    # 3. Draw the player rectangle onto the screen surface
-    pygame.draw.rect(screen, BLUE, player_rect)
+    # Corpo principal metálico
+    body_rect = (player_x + 8, player_y + 10, 24, 24)
+    pygame.draw.rect(screen, (50, 120, 220), body_rect, border_radius=5)
+
+    # Visor (Tela preta)
+    pygame.draw.rect(screen, (20, 20, 30), (player_x + 12, player_y + 16, 16, 8))
+
+    # Cor do olho (XAI visual: Muda de acordo com a Epsilon / Confiança do Agente)
+    if agent.epsilon > 0.6:
+         eye_color = (255, 200, 0) # Amarelo / IA explorando/confusa
+    elif agent.epsilon < 0.3:
+         eye_color = (50, 255, 50) # Verde / IA confiante/Aprendeu o mapa
+    else:
+         eye_color = (0, 255, 255) # Ciano/ Estado normal de aprendizado
+
+    # Desenha o olho piscando no visor
+    eye_width = 12 if pulse > 0.1 else 2 # Animação de "piscar"
+    pygame.draw.rect(screen, eye_color, (player_x + 20 - (eye_width // 2), player_y + 18, eye_width, 4))
+
+    # Antena de comunicação com a Groq
+    pygame.draw.line(screen, LIGHT_GRAY, (player_x + 20, player_y + 10), (player_x + 20, player_y + 2), 2)
+    # Bolinha da antena
+    antenna_color = RED if pulse > 0.5 else (100, 0, 0)
+    pygame.draw.circle(screen, antenna_color, (player_x + 20, player_y + 2), 3)
 
     # --- DRAWING THE HUD (Heads-Up Display) ---
     # A. Current window size
