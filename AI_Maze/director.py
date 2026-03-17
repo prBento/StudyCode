@@ -51,7 +51,8 @@ class GameDirector:
         Use exactly this structure:
         {{
             "spawn_chance": <float_value>,
-            "hazard_lifetime": <int_value>
+            "hazard_lifetime": <int_value>,
+            "reasoning": "<Write a short sentence in Brazilian Portuguese explaining why you chose these numbers. Max 60 characters!>"
         }}
         """
 

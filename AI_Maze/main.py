@@ -1,6 +1,7 @@
 import pygame
 import sys
 import random
+import textwrap
 from agent import QLearningAgent
 from director import GameDirector
 
@@ -61,6 +62,7 @@ director = GameDirector()
 # Mutable environment variables (controlled by the LLM)
 current_spawn_chance = 0.10
 current_hazard_lifetime = 50
+current_llm_reasoning = "Nenhuma intervenção ainda. IA explorando mapa inicial."
 
 # Performance tracking metrics
 deaths = 0
@@ -250,6 +252,7 @@ while running:
             # Apply the new rules returned by the LLM
             new_spawn = new_rules.get("spawn_chance", current_spawn_chance)
             new_lifetime = new_rules.get("hazard_lifetime", current_hazard_lifetime)
+            current_llm_reasoning = new_rules.get("reasoning", "Ajuste de dificuldade padrão.")
 
             # --- DYNAMIC EPSILON SHOCK ---
             spawn_increase = new_spawn - current_spawn_chance
@@ -308,7 +311,7 @@ while running:
     # --- DRAWNING THE HUD (Heads-Up Display) ---
     # A. Tamanho atual da janela
     current_w, current_h = screen.get_size()
-    hud_height = 90 # Altura do painel inferior
+    hud_height = 95 # Altura do painel inferior
 
     # B. Camada semi transparente
     hud_surface = pygame.Surface((current_w, hud_height))
@@ -326,20 +329,29 @@ while running:
 
     # F. Título do agente
     col1_x = 20
-    screen.blit(font_main.render("Status do Agente", True, WHITE), (col1_x, pad_y))
-    screen.blit(font_main.render(f"Tempo Atual: {format_time(frames_survived)}", True, LIGHT_GRAY), (col1_x, pad_y + 25))
-    screen.blit(font_main.render(f"Record: {format_time(global_high_score)}", True, (200, 180, 50)), (col1_x, pad_y + 50))
+    screen.blit(font_main.render("Q-Learning AI Agent", True, WHITE), (col1_x, pad_y))
+    screen.blit(font_main.render(f"Tempo Atual: {format_time(frames_survived)}", True, LIGHT_GRAY), (col1_x, pad_y + 26))
+    screen.blit(font_main.render(f"Record: {format_time(global_high_score)}", True, (200, 180, 50)), (col1_x, pad_y + 48))
+    pygame.draw.line(screen, (70, 70, 70), (200, pad_y), (200, current_h - 15), 1)
     
     # G. LLM
-    col2_x = 280 # Center
-    screen.blit(font_main.render("Groq (LLM)", True, WHITE), (col2_x, pad_y))
-    screen.blit(font_main.render(f"Epsilon: {agent.epsilon:.2f} Exploração", True, LIGHT_GRAY), (col2_x, pad_y + 25))
-    screen.blit(font_small.render(f"Dificuldade Atual: {int(current_spawn_chance * 100)}% Spawn", True, RED), (col2_x, pad_y + 50))
+    col2_x = 220 # Center
+    screen.blit(font_main.render("Groq (LLM) - Regras", True, WHITE), (col2_x, pad_y))
+    screen.blit(font_main.render(f"Epsilon: {agent.epsilon:.2f} Exploração", True, LIGHT_GRAY), (col2_x, pad_y + 26))
+    screen.blit(font_small.render(f"Dificuldade Atual: {int(current_spawn_chance * 100)}% Spawn", True, RED), (col2_x, pad_y + 48))
+    pygame.draw.line(screen, (70, 70, 70), (420, pad_y), (420, current_h - 15), 1)
 
     # H. XAI Logs
-    col3_x = 580 # Right
-    screen.blit(font_main.render("Log de Decisões", True, WHITE), (col3_x, pad_y))
-    screen.blit(font_main.render("Aguardando balões de pensamento...", True, (100,150,100)), (col3_x, pad_y + 25))
+    col3_x = 440 # Right
+    screen.blit(font_main.render("Log de Decisões Groq (LLM)", True, WHITE), (col3_x, pad_y))
+
+    # H1. Quebra o texto da LL em linhas de no máximo 50 char
+    wrapped_reasoning = textwrap.wrap(current_llm_reasoning, width=85)
+
+    # H2. Desenha cada linha uma debaixo da outra
+    for i, line in enumerate(wrapped_reasoning):
+        texto_renderizado = font_small.render(line, True, (150, 255, 150))
+        screen.blit(texto_renderizado, (col3_x, pad_y + 22 + (i * 20)))
 
     # ------------------------------------------------------
 
