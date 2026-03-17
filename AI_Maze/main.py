@@ -7,7 +7,9 @@ from director import GameDirector
 # ====================================
 # 1. CONFIGURATION & CONSTANTS
 # ====================================
-WINDOW_WIDTH = 800
+MAZE_WIDTH = 800
+UI_WIDTH = 300
+WINDOW_WIDTH = MAZE_WIDTH + UI_WIDTH # 1100px
 WINDOW_HEIGHT = 600
 GRID_SIZE = 40          # The world is divided into 40x40 pixel blocks
 FPS = 2                # Game speed slowled down to watch de AI learn
@@ -18,6 +20,14 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 BLUE = (0, 100, 255)    # Agent
 RED = (255, 0, 0)       # Hazard/Perigo
+DARK_GREY = (30, 30, 30)
+
+# Convert frames in clock's time (MM:SS)
+def format_time(frames):
+     total_seconds = frames // FPS
+     minutes = total_seconds // 60
+     seconds = total_seconds % 60
+     return f"{minutes:02d}:{seconds:02d}"
 
 # ==========================================
 # 2. SYSTEM INITIALIZATION
@@ -39,7 +49,7 @@ font_small = pygame.font.SysFont('Arial', 18)
 # 3. GAME STATE (VARIABLES)
 # ==========================================
 # We define start constants so we can easily reset the player later
-player_x = random.randrange(0, WINDOW_WIDTH, GRID_SIZE)
+player_x = random.randrange(0, MAZE_WIDTH, GRID_SIZE)
 player_y = random.randrange(0, WINDOW_HEIGHT, GRID_SIZE)
 
 # Actions: 0=UP, 1=DOWN, 2=LEFT, 3-RIGHT
@@ -56,6 +66,7 @@ current_hazard_lifetime = 50
 deaths = 0
 frames_survived = 0
 max_survival_time = 0
+global_high_score = 0
 
 # Director evaluation timer
 current_eval_interval = 20 # 2 FPS, 20 frames = 10 seconds in real world
@@ -69,7 +80,7 @@ def get_state(x, y, hazards_lists):
      danger_up = 1 if y - GRID_SIZE < 0 or (x, y - GRID_SIZE) in hazards_lists else 0
      danger_down = 1 if y + GRID_SIZE >= WINDOW_HEIGHT or (x, y + GRID_SIZE) in hazards_lists else 0
      danger_left = 1 if x - GRID_SIZE < 0 or (x - GRID_SIZE, y) in hazards_lists else 0
-     danger_right = 1 if x + GRID_SIZE >= WINDOW_WIDTH or (x + GRID_SIZE, y) in hazards_lists else 0
+     danger_right = 1 if x + GRID_SIZE >= MAZE_WIDTH or (x + GRID_SIZE, y) in hazards_lists else 0
 
      # States is a tuple like (1, 0, 0, 1) meaning danger UP and RIGHT
      return(danger_up, danger_down, danger_left, danger_right)
@@ -89,7 +100,7 @@ def generate_maze(px, py):
     ]
         
     # Loop through every possible column (X) and row (Y) in our grid
-    for x in range(0, WINDOW_WIDTH, GRID_SIZE):
+    for x in range(0, MAZE_WIDTH, GRID_SIZE):
          for y in range(0, WINDOW_HEIGHT, GRID_SIZE):
                
                # PROTECT THE SPAWN: Don't put a hazard where the player starts!
@@ -146,7 +157,7 @@ while running:
         # Use the dynamic spawn chance controlled by the LLM
     if random.random() < current_spawn_chance:
         # Pick a random grid coordinate
-        hx = random.randrange(0, WINDOW_WIDTH, GRID_SIZE)
+        hx = random.randrange(0, MAZE_WIDTH, GRID_SIZE)
         hy = random.randrange(0, WINDOW_HEIGHT, GRID_SIZE)
 
         # Make sure ir doesn't spaws ON the player or where alrealdy exists
@@ -171,7 +182,7 @@ while running:
 
     # 4. Check if the planned move is deadly (wall or red bloack)
     is_deadly = False
-    if next_x < 0 or next_x >= WINDOW_WIDTH or next_y < 0 or next_y >= WINDOW_HEIGHT:
+    if next_x < 0 or next_x >= MAZE_WIDTH or next_y < 0 or next_y >= WINDOW_HEIGHT:
          is_deadly = True # Hit a boundary wall
     elif (next_x, next_y) in hazards:
          is_deadly = True # Hit a red hazard
@@ -182,15 +193,18 @@ while running:
          deaths += 1
          frames_survived = 0
          print(f"Crash AI Randomness (Epsilon): {agent.epsilon:.2f} | Resetting map...")
-         player_x = random.randrange(0, WINDOW_WIDTH, GRID_SIZE)
+         player_x = random.randrange(0, MAZE_WIDTH, GRID_SIZE)
          player_y = random.randrange(0, WINDOW_HEIGHT, GRID_SIZE)
          hazards = generate_maze(player_x, player_y) # Rebuild de world on death
 
     else:
          reward = 1 # Survived this step!
          frames_survived += 1
+
          if frames_survived > max_survival_time:
               max_survival_time = frames_survived
+         if frames_survived > global_high_score:
+              global_high_score = frames_survived
 
          player_x, player_y = next_x, next_y # Actually move the character
 
@@ -281,25 +295,43 @@ while running:
     pygame.draw.rect(screen, BLUE, player_rect)
 
     # --- DRAWNING THE HUD (Heads-Up Display) ---
-    # Agent (Canto Superior Esquerdo)
-    timer_text = font_main.render(f"Tempo Vivo: {frames_survived}", True, WHITE)
-    record_text = font_main.render(f"Record (High Score): {max_survival_time}", True, (255, 215, 0))
-    epsilon_text = font_small.render(f"Taxa de Exploração (Epsilon): {agent.epsilon:.2f}", True, (200, 200, 255))
+    # A. Fundo do painel lateral
+    ui_rect = (MAZE_WIDTH, 0, UI_WIDTH, WINDOW_HEIGHT)
+    pygame.draw.rect(screen, DARK_GREY, ui_rect)
 
-    # Director (Canto Superior Direito)
-    diff_title = font_small.render("Regras do Diretor LLM: ", True, (255, 150, 150))
-    spawn_info = font_main.render(f"Spawn de Perigo: {int(current_spawn_chance * 100)}%", True, RED)
-    life_info = font_main.render(f"Tempo de Vida: {current_hazard_lifetime} frames", True, RED)
+    # B. Linha separando o labirinto
+    pygame.draw.line(screen, WHITE, (MAZE_WIDTH, 0), (MAZE_WIDTH, WINDOW_HEIGHT), 2)
 
-    # Desenhando os textos na tela usand .blit()
-    screen.blit(timer_text, (10, 10))
-    screen.blit(record_text, (10, 40))
-    screen.blit(epsilon_text, (10, 70))
+    # C. Margem para os textos dentro do painel
+    pad_x = MAZE_WIDTH + 20
 
-    # O X aqui é calcdulado para alinhar a direita
-    screen.blit(diff_title, (WINDOW_WIDTH - diff_title.get_width() - 10, 10))
-    screen.blit(spawn_info, (WINDOW_WIDTH - spawn_info.get_width() - 10, 35))
-    screen.blit(life_info, (WINDOW_WIDTH - life_info.get_width() - 10, 65))
+    # D. Título do agente
+    title_agent = font_main.render("STATUS DO AGENTE", True, BLUE)
+    screen.blit(title_agent, (pad_x, 20))
+
+    # E. Tempos formatados em MM:SS
+    str_time = format_time(frames_survived)
+    str_record = format_time(global_high_score)
+
+    screen.blit(font_main.render(f"Tempo Atual: {str_time}", True, WHITE), (pad_x, 60))
+    screen.blit(font_main.render(f"Record: {str_record}", True, (255, 215, 0)), (pad_x, 90))
+    screen.blit(font_small.render(f"Epsilon (Aleatório): {agent.epsilon:.2f}", True, (200, 200, 255)), (pad_x, 130))
+
+    # F. Linha do Diretor
+    pygame.draw.line(screen, (100, 100, 100), (pad_x, 170), (WINDOW_WIDTH - 20, 170), 1)
+    title_llm = font_main.render("Diretor LLM", True, (255, 100, 100))
+    screen.blit(title_llm, (pad_x, 190))
+
+    screen.blit(font_small.render(f"Chance de Spawn: {int(current_spawn_chance * 100)}%", True, RED), (pad_x, 230))
+
+    # G. Tempo de vida dos perigos
+    life_seconds = current_hazard_lifetime // FPS
+    screen.blit(font_small.render(f"Vida do Perigo: {life_seconds}s", True, RED), (pad_x, 260))
+
+    # H. Espaço reservado para o futuro XAI log
+    pygame.draw.line(screen, (100, 100, 100), (pad_x, 300), (WINDOW_WIDTH - 20, 300), 1)
+    screen.blit(font_small.render("Última decisão LLM:", True, (150, 255, 150)), (pad_x, 320))
+    screen.blit(font_small.render("(Aguardando Logs...)", True, (100, 150, 100)), (pad_x, 350))
 
     # ------------------------------------------------------
 
