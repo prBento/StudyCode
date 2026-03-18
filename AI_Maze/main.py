@@ -66,8 +66,8 @@ prev_y = float(player_y)
 # Relógio interno para controlar o cérebro da IA
 last_tick_time = pygame.time.get_ticks()
 
-# Actions: 0=UP, 1=DOWN, 2=LEFT, 3=RIGHT
-agent = QLearningAgent(actions=[0, 1, 2, 3])
+# Actions: 0=UP, 1=DOWN, 2=LEFT, 3=RIGHT, 4=UP-LEFT, 5=UP-RIGHT, 6=DOWN-LEFT, 7=DOWN-RIGHT
+agent = QLearningAgent(actions=[0, 1, 2, 3, 4, 5, 6, 7])
 
 # AI Game Director & Metrics
 director = GameDirector()
@@ -236,6 +236,9 @@ while running:
 
          # 2. Ask the Brain what to do
          action = agent.choose_action(current_state)
+         # Traduz a Ação
+         dirs = ["UP", "DOWN", "LEFT", "RIGHT", "UP-LEFT", "UP-RIGHT", "DOWN-LEFT", "DOWN-RIGHT"]
+         action_str = dirs[action]
 
         # 3. Predict where the action will take us
          next_x, next_y = player_x, player_y
@@ -243,6 +246,18 @@ while running:
          elif action == 1: next_y += GRID_SIZE   # DOWN
          elif action == 2: next_x -= GRID_SIZE   # LEFT
          elif action == 3: next_x += GRID_SIZE   # RIGHT
+         elif action == 4: # UP-LEFT
+              next_x -= GRID_SIZE
+              next_y -= GRID_SIZE
+         elif action == 5: # UP-RIGHT
+              next_x += GRID_SIZE
+              next_y -= GRID_SIZE
+         elif action == 6: # DOWN-LEFT
+              next_x -= GRID_SIZE
+              next_y += GRID_SIZE
+         elif action == 7: # DOWN-RIGHT
+              next_x += GRID_SIZE
+              next_y += GRID_SIZE
 
         # 4. Check if the planned move is deadly (wall or hazard block)
          is_deadly = False
