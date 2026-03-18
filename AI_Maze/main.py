@@ -254,6 +254,12 @@ while running:
             deaths += 1
             frames_survived = 0
             print(f"Crash! AI Randomness (Epsilon): {agent.epsilon:.2f} | Resetting map...")
+
+            draw_x = float(next_x)
+            draw_y = float(next_y)
+
+            body_rect = (draw_x + 8, draw_y + 10, 24, 24)
+            pygame.draw.rect(screen, (50, 120, 220), body_rect, border_radius=5)
             
             # Calcula o centro do bloco que causou a morte
             crash_x = next_x + (GRID_SIZE // 2)
