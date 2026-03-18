@@ -309,6 +309,14 @@ while running:
     # 1. Clear the screen from the previous frame
     screen.fill((15, 15, 20))
 
+    # linhas verticais
+    for x in range(0, MAZE_WIDTH, GRID_SIZE):
+         pygame.draw.line(screen, (30, 30, 40), (x, 0), (x, WINDOW_HEIGHT), 1)
+
+    # Linhas horizontais
+    for y in range(0, WINDOW_HEIGHT, GRID_SIZE):
+         pygame.draw.line(screen, (30, 30, 40), (0, y), (MAZE_WIDTH, y), 1)       
+
     time_now = pygame.time.get_ticks()
     pulse = (math.sin(time_now / 200.0) + 1) / 2.0
 
