@@ -93,10 +93,15 @@ def get_state(x, y, hazards_lists):
      The AI's Radar. Looks 1 block for every direction.
      Returns a tuple of 4 values (0 for safe, 1 for danger)
      """
-     danger_up = 1 if y - GRID_SIZE < 0 or (x, y - GRID_SIZE) in hazards_lists else 0
-     danger_down = 1 if y + GRID_SIZE >= WINDOW_HEIGHT or (x, y + GRID_SIZE) in hazards_lists else 0
-     danger_left = 1 if x - GRID_SIZE < 0 or (x - GRID_SIZE, y) in hazards_lists else 0
-     danger_right = 1 if x + GRID_SIZE >= MAZE_WIDTH or (x + GRID_SIZE, y) in hazards_lists else 0
+     look_up_y = (y - GRID_SIZE) % WINDOW_HEIGHT
+     look_down_y = (y + GRID_SIZE) % WINDOW_HEIGHT
+     look_left_x = (x - GRID_SIZE) % MAZE_WIDTH
+     look_right_x = (x + GRID_SIZE) % MAZE_WIDTH
+
+     danger_up = 1 if (x, look_up_y) in hazards_lists else 0
+     danger_down = 1 if (x, look_down_y) in hazards_lists else 0
+     danger_left = 1 if (look_left_x, y) in hazards_lists else 0
+     danger_right = 1 if (look_right_x, y) in hazards_lists else 0
 
      # States is a tuple like (1, 0, 0, 1) meaning danger UP and RIGHT
      return(danger_up, danger_down, danger_left, danger_right)
@@ -259,12 +264,14 @@ while running:
               next_x += GRID_SIZE
               next_y += GRID_SIZE
 
+        # Pac Man Effect
+         next_x = next_x % MAZE_WIDTH
+         next_y = next_y % WINDOW_HEIGHT
+
         # 4. Check if the planned move is deadly (wall or hazard block)
          is_deadly = False
-         if next_x < 0 or next_x >= MAZE_WIDTH or next_y < 0 or next_y >= WINDOW_HEIGHT:
-            is_deadly = True # Hit a boundary wall
-         elif (next_x, next_y) in hazards:
-            is_deadly = True # Hit a red hazard
+         if (next_x, next_y) in hazards:
+             is_deadly = True # Hit a red hazard
 
         # 5. Assign Rewards and Move
          if is_deadly:
@@ -313,6 +320,17 @@ while running:
                 max_survival_time = frames_survived         
 
             player_x, player_y = next_x, next_y # Actually move the character
+
+        # Wrap-around Lerp
+         if player_x - prev_x > GRID_SIZE * 2: # Foi para a esquerda dando a volta
+             prev_x += MAZE_WIDTH
+         elif prev_x - player_x > GRID_SIZE * 2: # Foi para a direita dando a volta
+             prev_x -= MAZE_WIDTH
+
+         if player_y - prev_y > GRID_SIZE * 2: # Foi para cima dando a volta
+             prev_y += WINDOW_HEIGHT
+         elif prev_y - player_y > GRID_SIZE * 2: # Foi para baixo dando a volta
+             prev_y -= WINDOW_HEIGHT         
 
         # 6. Observe the new state after moving
          next_state = get_state(player_x, player_y, hazards)
