@@ -14,7 +14,9 @@ WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 MAZE_WIDTH = WINDOW_WIDTH
 GRID_SIZE = 40          # The world is divided into 40x40 pixel blocks
-FPS = 2                 # Game speed slowed down to watch the AI learn
+FPS = 60                # Game speed slowed down to watch the AI learn
+TICK_RATE = 2           # A IA toma 2 decisões por segundo
+TICK_DELAY = 1000 // TICK_RATE      # Tempo em milissegundos entre as decisões
 
 # RGB Color Definitions
 BLACK = (0, 0, 0)
@@ -26,7 +28,7 @@ DARK_GREY = (30, 30, 30)
 
 # Convert frames into clock's time (MM:SS)
 def format_time(frames):
-     total_seconds = frames // FPS
+     total_seconds = frames // TICK_RATE
      minutes = total_seconds // 60
      seconds = total_seconds % 60
      return f"{minutes:02d}:{seconds:02d}"
@@ -53,6 +55,13 @@ font_small = pygame.font.SysFont('Consolas', 15)
 # We define start constants so we can easily reset the player later
 player_x = random.randrange(0, MAZE_WIDTH, GRID_SIZE)
 player_y = random.randrange(0, WINDOW_HEIGHT, GRID_SIZE)
+
+# Variáveis para desenho suave
+draw_x = float(player_x)
+draw_y = float(player_y)
+
+# Relógio interno para controlar o cérebro da IA
+last_tick_time = pygame.time.get_ticks()
 
 # Actions: 0=UP, 1=DOWN, 2=LEFT, 3=RIGHT
 agent = QLearningAgent(actions=[0, 1, 2, 3])
@@ -187,124 +196,130 @@ while running:
     # --------------------------------------
     # B. GAME LOGIC UPDATE (THE AI BRAIN)
     # --------------------------------------
+    current_time = pygame.time.get_ticks()
+
+    if current_time - last_tick_time >= TICK_DELAY:
+         last_tick_time = current_time
     
-    # UPDATE DYNAMIC ENVIRONMENT
-    # 1. Age exiting hazards and remove dead ones
-    keys_to_remove = []
-    for pos in hazards:
-         hazards[pos] -= 1 # Decrease lifetime by 1 frame
-         if hazards[pos] <= 0:
-              keys_to_remove.append(pos)
+        # UPDATE DYNAMIC ENVIRONMENT
+        # 1. Age exiting hazards and remove dead ones
+         keys_to_remove = []
+         for pos in hazards:
+            hazards[pos] -= 1 # Decrease lifetime by 1 frame
+            if hazards[pos] <= 0:
+                keys_to_remove.append(pos)
 
-    for pos in keys_to_remove:
-         del hazards[pos] # Delete the hazard from dictionary
+         for pos in keys_to_remove:
+            del hazards[pos] # Delete the hazard from dictionary
 
-    # 2. Randomly spawn new hazards during gameplay
-    if random.random() < current_spawn_chance:
-        # Pick a random grid coordinate
-        hx = random.randrange(0, MAZE_WIDTH, GRID_SIZE)
-        hy = random.randrange(0, WINDOW_HEIGHT, GRID_SIZE)
+         # 2. Randomly spawn new hazards during gameplay
+         if random.random() < current_spawn_chance:
+            # Pick a random grid coordinate
+            hx = random.randrange(0, MAZE_WIDTH, GRID_SIZE)
+            hy = random.randrange(0, WINDOW_HEIGHT, GRID_SIZE)
 
-        # Make sure it doesn't spawn ON the player or where one already exists
-        if (hx, hy) != (player_x, player_y) and (hx, hy) not in hazards:
-            # Use the dynamic lifetime controlled by the LLM
-            hazards[(hx, hy)] = current_hazard_lifetime
+            # Make sure it doesn't spawn ON the player or where one already exists
+            if (hx, hy) != (player_x, player_y) and (hx, hy) not in hazards:
+                # Use the dynamic lifetime controlled by the LLM
+                hazards[(hx, hy)] = current_hazard_lifetime
 
 
-    # KNOWLEDGE CYCLE
-    # 1. Observe the current state (Radar)
-    current_state = get_state(player_x, player_y, hazards)
+         # KNOWLEDGE CYCLE
+         # 1. Observe the current state (Radar)
+         current_state = get_state(player_x, player_y, hazards)
 
-    # 2. Ask the Brain what to do
-    action = agent.choose_action(current_state)
+         # 2. Ask the Brain what to do
+         action = agent.choose_action(current_state)
 
-    # 3. Predict where the action will take us
-    next_x, next_y = player_x, player_y
-    if action == 0: next_y -= GRID_SIZE     # UP
-    elif action == 1: next_y += GRID_SIZE   # DOWN
-    elif action == 2: next_x -= GRID_SIZE   # LEFT
-    elif action == 3: next_x += GRID_SIZE   # RIGHT
+        # 3. Predict where the action will take us
+         next_x, next_y = player_x, player_y
+         if action == 0: next_y -= GRID_SIZE     # UP
+         elif action == 1: next_y += GRID_SIZE   # DOWN
+         elif action == 2: next_x -= GRID_SIZE   # LEFT
+         elif action == 3: next_x += GRID_SIZE   # RIGHT
 
-    # 4. Check if the planned move is deadly (wall or hazard block)
-    is_deadly = False
-    if next_x < 0 or next_x >= MAZE_WIDTH or next_y < 0 or next_y >= WINDOW_HEIGHT:
-         is_deadly = True # Hit a boundary wall
-    elif (next_x, next_y) in hazards:
-         is_deadly = True # Hit a red hazard
+        # 4. Check if the planned move is deadly (wall or hazard block)
+         is_deadly = False
+         if next_x < 0 or next_x >= MAZE_WIDTH or next_y < 0 or next_y >= WINDOW_HEIGHT:
+            is_deadly = True # Hit a boundary wall
+         elif (next_x, next_y) in hazards:
+            is_deadly = True # Hit a red hazard
 
-    # 5. Assign Rewards and Move
-    if is_deadly:
-         if frames_survived > global_high_score:
-              global_high_score = frames_survived
+        # 5. Assign Rewards and Move
+         if is_deadly:
+            if frames_survived > global_high_score:
+                global_high_score = frames_survived
 
-         reward = -100
-         deaths += 1
-         frames_survived = 0
-         print(f"Crash! AI Randomness (Epsilon): {agent.epsilon:.2f} | Resetting map...")
-        
-         # Calcula o centro do bloco que causou a morte
-         crash_x = next_x + (GRID_SIZE // 2)
-         crash_y = next_y + (GRID_SIZE // 2)
-
-         # Desenha uma explosão
-         pygame.draw.circle(screen, (255, 100, 0), (crash_x, crash_y), 30) # Explosão externa
-         pygame.draw.circle(screen, (255, 255, 255), (crash_x, crash_y), 15) # Núcleo quente
-
-         # Força a tela a desenha a explosão imediatamente
-         pygame.display.flip()
-
-         # Congela por 400 milissegundos
-         pygame.time.delay(400)
-         
-
-         player_x = random.randrange(0, MAZE_WIDTH, GRID_SIZE)
-         player_y = random.randrange(0, WINDOW_HEIGHT, GRID_SIZE)
-         hazards = generate_maze(player_x, player_y) # Rebuild the world on death
-
-    else:
-         reward = 1 # Survived this step!
-         frames_survived += 1
-
-         if frames_survived > max_survival_time:
-              max_survival_time = frames_survived         
-
-         player_x, player_y = next_x, next_y # Actually move the character
-
-    # 6. Observe the new state after moving
-    next_state = get_state(player_x, player_y, hazards)
-
-    # 7. TEACH THE BRAIN (Update the Q-Table)
-    agent.learn(current_state, action, reward, next_state)
-
-    # 8. The Director Intervenes
-    frame_counter += 1
-    if frame_counter >= current_eval_interval and not is_awaiting_director:
-         print("\n --- LLM EVALUATION TRIGGERED ---")
-
-         # RPG style dice roll (D20)
-         agent_roll = random.randint(1, 20)
-         director_roll = random.randint(1, 20)
-         print(f"[CLASH] Agent rolled: {agent_roll} | Director rolled: {director_roll}")
-
-         if agent_roll > director_roll:
-              print("[CLASH] Agent Wins! Intervention blocked. Gaining time to learn...")              
-              print("--------------------------------\n")
-
-         else:              
-            print("[CLASH] Director Wins! Invoking Groq to alter the matrix...")
-            # Call the LLM API via our Director class
+            reward = -100
+            deaths += 1
+            frames_survived = 0
+            print(f"Crash! AI Randomness (Epsilon): {agent.epsilon:.2f} | Resetting map...")
             
-            is_awaiting_director = True
+            # Calcula o centro do bloco que causou a morte
+            crash_x = next_x + (GRID_SIZE // 2)
+            crash_y = next_y + (GRID_SIZE // 2)
 
-            thread = threading.Thread(target=director_worker, args=(deaths, max_survival_time,agent.epsilon))
-            thread.daemon = True
-            thread.start()
-        
-            # Reset the metrics for the new evaluation epoch
-            deaths = 0
-            max_survival_time = 0
-            frame_counter = 0
-            print("--------------------------------\n")
+            # Desenha uma explosão
+            pygame.draw.circle(screen, (255, 100, 0), (crash_x, crash_y), 30) # Explosão externa
+            pygame.draw.circle(screen, (255, 255, 255), (crash_x, crash_y), 15) # Núcleo quente
+
+            # Força a tela a desenha a explosão imediatamente
+            pygame.display.flip()
+
+            # Congela por 400 milissegundos
+            pygame.time.delay(400)
+            
+
+            player_x = random.randrange(0, MAZE_WIDTH, GRID_SIZE)
+            player_y = random.randrange(0, WINDOW_HEIGHT, GRID_SIZE)
+            draw_x = float(player_x)
+            draw_y = float(player_y)
+            hazards = generate_maze(player_x, player_y) # Rebuild the world on death
+
+         else:
+            reward = 1 # Survived this step!
+            frames_survived += 1
+
+            if frames_survived > max_survival_time:
+                max_survival_time = frames_survived         
+
+            player_x, player_y = next_x, next_y # Actually move the character
+
+        # 6. Observe the new state after moving
+         next_state = get_state(player_x, player_y, hazards)
+
+        # 7. TEACH THE BRAIN (Update the Q-Table)
+         agent.learn(current_state, action, reward, next_state)
+
+        # 8. The Director Intervenes
+         frame_counter += 1
+         if frame_counter >= current_eval_interval and not is_awaiting_director:
+            print("\n --- LLM EVALUATION TRIGGERED ---")
+
+            # RPG style dice roll (D20)
+            agent_roll = random.randint(1, 20)
+            director_roll = random.randint(1, 20)
+            print(f"[CLASH] Agent rolled: {agent_roll} | Director rolled: {director_roll}")
+
+            if agent_roll > director_roll:
+                print("[CLASH] Agent Wins! Intervention blocked. Gaining time to learn...")              
+                print("--------------------------------\n")
+
+            else:              
+                print("[CLASH] Director Wins! Invoking Groq to alter the matrix...")
+                # Call the LLM API via our Director class
+                
+                is_awaiting_director = True
+
+                thread = threading.Thread(target=director_worker, args=(deaths, max_survival_time,agent.epsilon))
+                thread.daemon = True
+                thread.start()
+            
+                # Reset the metrics for the new evaluation epoch
+                deaths = 0
+                max_survival_time = 0
+                frame_counter = 0
+                print("--------------------------------\n")
 
 
     # --------------------------------------
@@ -347,17 +362,20 @@ while running:
          pygame.draw.line(screen, (255, 100, 100), (h_x + 8, h_y + 8), (h_x + GRID_SIZE - 8, h_y + GRID_SIZE - 8), 2)
          pygame.draw.line(screen, (255, 100, 100), (h_x + GRID_SIZE - 8, h_y + 8), (h_x + 8, h_y + GRID_SIZE - 8), 2) 
          
+    draw_x += (player_x - draw_x) * 0.15
+    draw_y += (player_y - draw_y) * 0.15
+    
     # Robot
     # Esteiras/Rodas laterais
-    pygame.draw.rect(screen, (100, 100, 100), (player_x + 4, player_y + 14, 6, 20), border_radius=3)
-    pygame.draw.rect(screen, (100, 100, 100), (player_x + 30, player_y + 14, 6, 20), border_radius=3)
+    pygame.draw.rect(screen, (100, 100, 100), (draw_x + 4, draw_y + 14, 6, 20), border_radius=3)
+    pygame.draw.rect(screen, (100, 100, 100), (draw_x + 30, draw_y + 14, 6, 20), border_radius=3)
 
     # Corpo principal metálico
-    body_rect = (player_x + 8, player_y + 10, 24, 24)
+    body_rect = (draw_x + 8, draw_y + 10, 24, 24)
     pygame.draw.rect(screen, (50, 120, 220), body_rect, border_radius=5)
 
     # Visor (Tela preta)
-    pygame.draw.rect(screen, (20, 20, 30), (player_x + 12, player_y + 16, 16, 8))
+    pygame.draw.rect(screen, (20, 20, 30), (draw_x + 12, draw_y + 16, 16, 8))
 
     # Cor do olho (XAI visual: Muda de acordo com a Epsilon / Confiança do Agente)
     if agent.epsilon > 0.6:
@@ -369,13 +387,13 @@ while running:
 
     # Desenha o olho piscando no visor
     eye_width = 12 if pulse > 0.1 else 2 # Animação de "piscar"
-    pygame.draw.rect(screen, eye_color, (player_x + 20 - (eye_width // 2), player_y + 18, eye_width, 4))
+    pygame.draw.rect(screen, eye_color, (draw_x + 20 - (eye_width // 2), draw_y + 18, eye_width, 4))
 
     # Antena de comunicação com a Groq
-    pygame.draw.line(screen, LIGHT_GRAY, (player_x + 20, player_y + 10), (player_x + 20, player_y + 2), 2)
+    pygame.draw.line(screen, LIGHT_GRAY, (draw_x + 20, draw_y + 10), (player_x + 20, draw_y + 2), 2)
     # Bolinha da antena
     antenna_color = RED if pulse > 0.5 else (100, 0, 0)
-    pygame.draw.circle(screen, antenna_color, (player_x + 20, player_y + 2), 3)
+    pygame.draw.circle(screen, antenna_color, (draw_x + 20, draw_y + 2), 3)
 
     # --- DRAWING THE HUD (Heads-Up Display) ---
     # A. Current window size
@@ -434,7 +452,7 @@ while running:
     pygame.display.flip()
 
     # 5. Cap the frame rate to ensure consistent speed across different computers
-    clock.tick(FPS)
+    clock.tick(TICK_RATE)
 
 # ==========================================
 # 5. GRACEFUL EXIT
