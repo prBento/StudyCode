@@ -3,6 +3,7 @@ import sys
 import random
 import textwrap
 import math
+import threading
 from agent import QLearningAgent
 from director import GameDirector
 
@@ -63,6 +64,7 @@ director = GameDirector()
 current_spawn_chance = 0.10
 current_hazard_lifetime = 50
 current_llm_reasoning = "No intervention yet. AI is exploring the initial map."
+is_awaiting_director = False
 
 # Performance tracking metrics
 deaths = 0
@@ -119,6 +121,40 @@ def generate_maze(px, py):
 
 # Create the first maze when the game starts
 hazards = generate_maze(player_x, player_y)
+
+def director_worker(deaths_snapshot, time_snapshot, epsilon_snapshot):
+     global current_spawn_chance, current_hazard_lifetime, current_llm_reasoning
+     global current_eval_interval, is_awaiting_director
+
+     try:
+          new_rules = director.evaluate_performance(deaths_snapshot, time_snapshot, epsilon_snapshot)
+
+          new_spawn = new_rules.get("spawn_chance", current_spawn_chance)
+          new_lifetime = new_rules.get("hazard_lifetime", current_hazard_lifetime)
+
+          current_llm_reasoning = new_rules.get("reasoning", "Default difficulty adjustment.")
+
+          spawn_increase = new_spawn -current_spawn_chance
+          if (spawn_increase > 0 or new_lifetime < current_hazard_lifetime) and agent.epsilon < 0.50:
+               extra_shock = max(0, spawn_increase) * 1.5
+               dynamic_shock = min(0.05 + extra_shock, 0.30)
+               agent.epsilon = min(agent.epsilon + dynamic_shock, 0.85)
+               print(f"[ADAPTATION] Hostile environment! Epsilon increased to: {agent.epsilon:.2f}")
+         
+          # Atualiza o mundo
+          current_spawn_chance = new_spawn
+          current_hazard_lifetime = new_lifetime
+
+          # Atualiza o ritmo
+          base_interval = 20
+          if agent.epsilon > 0.5: current_eval_interval = int(base_interval * 1.5)
+          elif agent.epsilon < 0.2: current_eval_interval = int(base_interval * 0.7)
+          else: current_eval_interval = base_interval
+
+     except Exception as e:
+          print(f"[THREAD ERROR] Failed to contact Groq: {e}")
+    
+     is_awaiting_director = False
 
 # ==========================================
 # 4. MAIN GAME LOOP
@@ -242,7 +278,7 @@ while running:
 
     # 8. The Director Intervenes
     frame_counter += 1
-    if frame_counter >= current_eval_interval:
+    if frame_counter >= current_eval_interval and not is_awaiting_director:
          print("\n --- LLM EVALUATION TRIGGERED ---")
 
          # RPG style dice roll (D20)
@@ -251,50 +287,18 @@ while running:
          print(f"[CLASH] Agent rolled: {agent_roll} | Director rolled: {director_roll}")
 
          if agent_roll > director_roll:
-              print("[CLASH] Agent Wins! Intervention blocked. Gaining time to learn...")
-              deaths = 0
-              max_survival_time = 0
-              frame_counter = 0
+              print("[CLASH] Agent Wins! Intervention blocked. Gaining time to learn...")              
               print("--------------------------------\n")
 
          else:              
             print("[CLASH] Director Wins! Invoking Groq to alter the matrix...")
             # Call the LLM API via our Director class
-            new_rules = director.evaluate_performance(deaths, max_survival_time, agent.epsilon)
+            
+            is_awaiting_director = True
 
-            # Apply the new rules returned by the LLM
-            new_spawn = new_rules.get("spawn_chance", current_spawn_chance)
-            new_lifetime = new_rules.get("hazard_lifetime", current_hazard_lifetime)
-            current_llm_reasoning = new_rules.get("reasoning", "Default difficulty adjustment.")
-
-            # --- DYNAMIC EPSILON SHOCK ---
-            spawn_increase = new_spawn - current_spawn_chance
-
-            if (spawn_increase > 0 or new_lifetime < current_hazard_lifetime) and agent.epsilon < 0.50:
-                # Math of shock: 0.10 base + 1.5 * hazard increase
-                extra_shock = max(0, spawn_increase) * 1.5
-                dynamic_shock = 0.05 + extra_shock
-
-                dynamic_shock = min(dynamic_shock, 0.30)
-
-                agent.epsilon = min(agent.epsilon + dynamic_shock, 0.85)
-                print(f"[ADAPTATION] Hostile environment! Dynamic shock of +{dynamic_shock:.2f}. New Epsilon: {agent.epsilon:.2f}")
-                
-            # Apply the new rules 
-            current_spawn_chance = new_spawn
-            current_hazard_lifetime = new_lifetime
-
-            # --- Dynamic Pacing --- 
-            base_interval = 20 # 10 seconds base (at 2 FPS)
-
-            if agent.epsilon > 0.5:
-                current_eval_interval = int(base_interval * 1.5)
-                print("[PACE] AI is exploring. The Director will wait longer before changing the map.")
-            elif agent.epsilon < 0.2:
-                current_eval_interval = int(base_interval * 0.7)
-                print("[PACE] AI is too confident. The next map change will come sooner.")
-            else:
-                current_eval_interval = base_interval
+            thread = threading.Thread(target=director_worker, args=(deaths, max_survival_time,agent.epsilon))
+            thread.daemon = True
+            thread.start()
         
             # Reset the metrics for the new evaluation epoch
             deaths = 0
