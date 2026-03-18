@@ -59,6 +59,9 @@ player_y = random.randrange(0, WINDOW_HEIGHT, GRID_SIZE)
 # Variáveis para desenho suave
 draw_x = float(player_x)
 draw_y = float(player_y)
+prev_x = float(player_x)
+prev_y = float(player_y)
+
 
 # Relógio interno para controlar o cérebro da IA
 last_tick_time = pygame.time.get_ticks()
@@ -70,9 +73,9 @@ agent = QLearningAgent(actions=[0, 1, 2, 3])
 director = GameDirector()
 
 # Mutable environment variables (controlled by the LLM)
-current_spawn_chance = 0.10
-current_hazard_lifetime = 50
-current_llm_reasoning = "No intervention yet. AI is exploring the initial map."
+current_spawn_chance = 0.02
+current_hazard_lifetime = 20
+current_llm_reasoning = "System Onboarding: Low hazards to allow safe initial exploration."
 is_awaiting_director = False
 
 # Performance tracking metrics
@@ -199,6 +202,9 @@ while running:
     current_time = pygame.time.get_ticks()
 
     if current_time - last_tick_time >= TICK_DELAY:
+         prev_x = float(player_x)
+         prev_y = float(player_y)
+
          last_tick_time = current_time
     
         # UPDATE DYNAMIC ENVIRONMENT
@@ -280,6 +286,8 @@ while running:
             player_y = random.randrange(0, WINDOW_HEIGHT, GRID_SIZE)
             draw_x = float(player_x)
             draw_y = float(player_y)
+            prev_x = float(player_x)
+            prev_y = float(player_y)
             hazards = generate_maze(player_x, player_y) # Rebuild the world on death
 
          else:
@@ -368,9 +376,12 @@ while running:
          pygame.draw.line(screen, (255, 100, 100), (h_x + 8, h_y + 8), (h_x + GRID_SIZE - 8, h_y + GRID_SIZE - 8), 2)
          pygame.draw.line(screen, (255, 100, 100), (h_x + GRID_SIZE - 8, h_y + 8), (h_x + 8, h_y + GRID_SIZE - 8), 2) 
          
-    draw_x += (player_x - draw_x) * 0.15
-    draw_y += (player_y - draw_y) * 0.15
-    
+    progress = (time_now - last_tick_time) / TICK_DELAY
+    progress = min(progress, 1.0)
+
+    draw_x = prev_x + (player_x - prev_x) * progress
+    draw_y = prev_y + (player_y - prev_y) * progress
+
     # Robot
     # Esteiras/Rodas laterais
     pygame.draw.rect(screen, (100, 100, 100), (draw_x + 4, draw_y + 14, 6, 20), border_radius=3)
@@ -396,7 +407,7 @@ while running:
     pygame.draw.rect(screen, eye_color, (draw_x + 20 - (eye_width // 2), draw_y + 18, eye_width, 4))
 
     # Antena de comunicação com a Groq
-    pygame.draw.line(screen, LIGHT_GRAY, (draw_x + 20, draw_y + 10), (player_x + 20, draw_y + 2), 2)
+    pygame.draw.line(screen, LIGHT_GRAY, (draw_x + 20, draw_y + 10), (draw_x + 20, draw_y + 2), 2)
     # Bolinha da antena
     antenna_color = RED if pulse > 0.5 else (100, 0, 0)
     pygame.draw.circle(screen, antenna_color, (draw_x + 20, draw_y + 2), 3)
@@ -458,7 +469,7 @@ while running:
     pygame.display.flip()
 
     # 5. Cap the frame rate to ensure consistent speed across different computers
-    clock.tick(TICK_RATE)
+    clock.tick(FPS)
 
 # ==========================================
 # 5. GRACEFUL EXIT
