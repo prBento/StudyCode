@@ -77,6 +77,7 @@ current_spawn_chance = 0.02
 current_hazard_lifetime = 20
 current_llm_reasoning = "System Onboarding: Low hazards to allow safe initial exploration."
 is_awaiting_director = False
+current_agent_log = "Action: [START] • System initialized. Waiting for data."
 
 # Performance tracking metrics
 deaths = 0
@@ -241,9 +242,24 @@ while running:
 
          # 2. Ask the Brain what to do
          action = agent.choose_action(current_state)
+
+         # Pega os valores matemáticos daquele exato momento (8 ações possíveis)
+         q_vals = agent.q_table.get(current_state, [0.0] * 8)
+         chosen_q = q_vals[action]
+
          # Traduz a Ação
          dirs = ["UP", "DOWN", "LEFT", "RIGHT", "UP-LEFT", "UP-RIGHT", "DOWN-LEFT", "DOWN-RIGHT"]
          action_str = dirs[action]
+
+         # Natural Language Log
+         if chosen_q == 0.0:
+             nl_text = f"No data. Exploring {action_str} randomly."
+         elif chosen_q > 0:
+             nl_text = f"Safe path known. Moving {action_str}."
+         else:
+             nl_text = f"Danger detected! Evading {action_str}."
+        
+         current_agent_log = f"Action: [{action_str}] • {nl_text}"
 
         # 3. Predict where the action will take us
          next_x, next_y = player_x, player_y
@@ -448,7 +464,7 @@ while running:
     # --- DRAWING THE HUD (Heads-Up Display) ---
     # A. Current window size
     current_w, current_h = screen.get_size()
-    hud_height = 95 # Bottom panel height
+    hud_height = 150 # Bottom panel height
 
     # B. Semi-transparent layer
     hud_surface = pygame.Surface((current_w, hud_height))
@@ -465,17 +481,30 @@ while running:
     pad_y = current_h - hud_height + 15 # Top margin
 
     # F. Agent Status Column
-    col1_x = 20
-    screen.blit(font_main.render("Q-Learning AI", True, WHITE), (col1_x, pad_y))
-    screen.blit(font_main.render(f"Time: {format_time(frames_survived)}", True, LIGHT_GRAY), (col1_x, pad_y + 26))
-    screen.blit(font_main.render(f"High Score: {format_time(global_high_score)}", True, (255, 215, 0)), (col1_x, pad_y + 48))
+    col1_center = 120
+    
+    t1 = font_main.render("Q-Learning AI", True, WHITE)
+    screen.blit(t1, t1.get_rect(center=(col1_center, pad_y + 10)))
+
+    t2 = font_main.render(f"Time: {format_time(frames_survived)}", True, LIGHT_GRAY)
+    screen.blit(t2, t2.get_rect(center=(col1_center, pad_y + 36)))
+
+    t3 = font_main.render(f"High Score: {format_time(global_high_score)}", True, (255, 215, 0))
+    screen.blit(t3, t3.get_rect(center=(col1_center, pad_y + 58)))
+
     pygame.draw.line(screen, (70, 70, 70), (240, pad_y), (240, current_h - 15), 1)
     
     # G. LLM Director Column
-    col2_x = 260
-    screen.blit(font_main.render("LLM Decision Rules (Groq)", True, WHITE), (col2_x, pad_y))
-    screen.blit(font_main.render(f"Exploration (Epsilon): {agent.epsilon:.2f}", True, LIGHT_GRAY), (col2_x, pad_y + 26))
-    screen.blit(font_small.render(f"Spawn Rate: {int(current_spawn_chance * 100)}%", True, (255, 100, 100)), (col2_x, pad_y + 48))
+    col2_center = 410
+    
+    t4 = font_main.render("LLM Decision Rules (Groq)", True, WHITE)
+    screen.blit(t4, t4.get_rect(center=(col2_center, pad_y + 10)))
+    
+    t5 = font_main.render(f"Exploration (Epsilon): {agent.epsilon:.2f}", True, LIGHT_GRAY)
+    screen.blit(t5, t5.get_rect(center=(col2_center, pad_y + 36)))
+    
+    t6 = font_small.render(f"Spawn Rate: {int(current_spawn_chance * 100)}%", True, (255, 100, 100))
+    screen.blit(t6, t6.get_rect(center=(col2_center, pad_y + 58)))
     pygame.draw.line(screen, (70, 70, 70), (580, pad_y), (580, current_h - 15), 1)
 
     # H. XAI Logs Column
@@ -495,6 +524,14 @@ while running:
     for i, line in enumerate(wrapped_reasoning):
         texto_renderizado = font_small.render(line, True, (180, 255, 180))
         screen.blit(texto_renderizado, (col3_x, pad_y + 26 + (i * 20)))
+
+    agent_y = pad_y + 75
+
+    agent_title = font_main.render("Agent Thought Process (Q-Table)", True, WHITE)
+    screen.blit(agent_title, (col3_x, agent_y))
+
+    text_agent = font_small.render(current_agent_log, True, (180, 255, 180))
+    screen.blit(text_agent, (col3_x, agent_y + 24))
 
     # ------------------------------------------------------
 
