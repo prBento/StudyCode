@@ -18,13 +18,13 @@ FPS = 60                # Game speed slowed down to watch the AI learn
 TICK_RATE = 1.2           # A IA toma 2 decisões por segundo
 TICK_DELAY = int(1000 // TICK_RATE)      # Tempo em milissegundos entre as decisões
 
-# RGB Color Definitions
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
-LIGHT_GRAY = (200, 200, 200)
-BLUE = (0, 100, 255)    # Agent
-RED = (200, 50, 50)     # Hazard
-DARK_GREY = (30, 30, 30)
+# RGB Color Definitions (Sci-Fi Palette)
+BLACK = (8, 10, 15)        # Void space (Quase preto, mas com toque azulado)
+WHITE = (240, 250, 255)    # Branco meio ciano
+LIGHT_GRAY = (140, 150, 170)
+BLUE = (0, 255, 255)       # Neon Cyan (Novo Agente)
+RED = (255, 40, 80)        # Neon Magenta/Vermelho (Novas Minas)
+DARK_GREY = (20, 25, 35)
 
 # Convert frames into clock's time (MM:SS)
 def format_time(frames):
@@ -422,15 +422,15 @@ while running:
     # C. RENDERING (DRAWING TO SCREEN)
     # --------------------------------------
     # 1. Clear the screen from the previous frame
-    screen.fill((15, 15, 20))
+    screen.fill(BLACK)
 
     # linhas verticais
     for x in range(0, MAZE_WIDTH, GRID_SIZE):
-         pygame.draw.line(screen, (30, 30, 40), (x, 0), (x, WINDOW_HEIGHT), 1)
+         pygame.draw.line(screen, (20, 28, 45), (x, 0), (x, WINDOW_HEIGHT), 1)
 
     # Linhas horizontais
     for y in range(0, WINDOW_HEIGHT, GRID_SIZE):
-         pygame.draw.line(screen, (30, 30, 40), (0, y), (MAZE_WIDTH, y), 1)       
+         pygame.draw.line(screen, (20, 28, 45), (0, y), (MAZE_WIDTH, y), 1)       
 
     time_now = pygame.time.get_ticks()
     pulse = (math.sin(time_now / 200.0) + 1) / 2.0
@@ -445,18 +445,21 @@ while running:
          
          glow_radius = int(10 + (mine_pulse * 6)) 
          
-         # Base escura da mina
-         pygame.draw.circle(screen, (80, 20, 20), (center_x, center_y), 16)
+         # Aura externa
+         pygame.draw.circle(screen, (80, 20, 20), (center_x, center_y), glow_radius + 4)
          
          # Brilho de energia (Pulsação)
-         pygame.draw.circle(screen, (255, 50, 50), (center_x, center_y), glow_radius)
+         pygame.draw.circle(screen, (100, 25, 50), (center_x, center_y), glow_radius)
          
-         # Núcleo de calor (Amarelo/Branco)
-         pygame.draw.circle(screen, (255, 200, 100), (center_x, center_y), 6) 
+         # Anel Neon principal
+         pygame.draw.circle(screen, RED, (center_x, center_y), glow_radius - 3)
+
+         # Núcleo quente super brilhante
+         pygame.draw.circle(screen, WHITE, (center_x, center_y), 4)
          
          # Detalhe técnico: um "X" marcando a mina
-         pygame.draw.line(screen, (255, 100, 100), (h_x + 8, h_y + 8), (h_x + GRID_SIZE - 8, h_y + GRID_SIZE - 8), 2)
-         pygame.draw.line(screen, (255, 100, 100), (h_x + GRID_SIZE - 8, h_y + 8), (h_x + 8, h_y + GRID_SIZE - 8), 2) 
+         pygame.draw.line(screen, WHITE, (center_x - 12, center_y), (center_x + 12, center_y), 2)
+         pygame.draw.line(screen, WHITE, (center_x, center_y - 12), (center_x, center_y + 12), 2) 
          
     progress = (time_now - last_tick_time) / TICK_DELAY
     progress = min(progress, 1.0)
@@ -465,34 +468,33 @@ while running:
     draw_y = prev_y + (player_y - prev_y) * progress
 
     # Robot
-    # Esteiras/Rodas laterais
-    pygame.draw.rect(screen, (100, 100, 100), (draw_x + 4, draw_y + 14, 6, 20), border_radius=3)
-    pygame.draw.rect(screen, (100, 100, 100), (draw_x + 30, draw_y + 14, 6, 20), border_radius=3)
+    center_draw_x = draw_x + 20
+    center_draw_y = draw_y + 20
 
-    # Corpo principal metálico
-    body_rect = (draw_x + 8, draw_y + 10, 24, 24)
-    pygame.draw.rect(screen, (50, 120, 220), body_rect, border_radius=5)
+    shield_pulse = int(2 + (pulse * 2))
+    pygame.draw.circle(screen, BLUE, (center_draw_x, center_draw_y), 16 + shield_pulse, 1)
 
-    # Visor (Tela preta)
-    pygame.draw.rect(screen, (20, 20, 30), (draw_x + 12, draw_y + 16, 16, 8))
+    pygame.draw.circle(screen, DARK_GREY, (center_draw_x, center_draw_y), 14)
+    pygame.draw.circle(screen, BLUE, (center_draw_x, center_draw_y), 12, 2)
 
     # Cor do olho (XAI visual: Muda de acordo com a Epsilon / Confiança do Agente)
     if agent.epsilon > 0.6:
-         eye_color = (255, 200, 0) # Amarelo / IA explorando/confusa
+         eye_color = (255, 180, 0) # Laranja / IA explorando/confusa
     elif agent.epsilon < 0.3:
-         eye_color = (50, 255, 50) # Verde / IA confiante/Aprendeu o mapa
+         eye_color = (50, 255, 100) # Verde Neon / IA confiante/Aprendeu o mapa
     else:
-         eye_color = (0, 255, 255) # Ciano/ Estado normal de aprendizado
+         eye_color = BLUE # Ciano/ Estado normal de aprendizado
 
     # Desenha o olho piscando no visor
-    eye_width = 12 if pulse > 0.1 else 2 # Animação de "piscar"
-    pygame.draw.rect(screen, eye_color, (draw_x + 20 - (eye_width // 2), draw_y + 18, eye_width, 4))
+    eye_width = 14 if pulse > 0.1 else 4 # Animação de "piscar"
+    pygame.draw.rect(screen, (10, 10, 15), (center_draw_x - 8, center_draw_y - 4, 16, 8))
+    pygame.draw.rect(screen, eye_color, (center_draw_x - (eye_width//2), center_draw_y - 2, eye_width, 4))
 
     # Antena de comunicação com a Groq
-    pygame.draw.line(screen, LIGHT_GRAY, (draw_x + 20, draw_y + 10), (draw_x + 20, draw_y + 2), 2)
+    pygame.draw.line(screen, LIGHT_GRAY, (center_draw_x, center_draw_y - 14), (center_draw_x, center_draw_y - 22), 2)
     # Bolinha da antena
-    antenna_color = RED if pulse > 0.5 else (100, 0, 0)
-    pygame.draw.circle(screen, antenna_color, (draw_x + 20, draw_y + 2), 3)
+    antenna_color = RED if pulse > 0.5 else BLUE
+    pygame.draw.circle(screen, antenna_color, (center_draw_x, center_draw_y - 22), 3)
 
     # --- DRAWING THE HUD (Heads-Up Display) ---
     # A. Current window size
