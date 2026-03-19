@@ -306,6 +306,19 @@ while running:
          if (next_x, next_y) in hazards:
              is_deadly = True # Hit a red hazard
 
+         elif action>= 4:
+             cross_1 = (player_x, next_y)
+             cross_2 = (next_x, player_y)
+
+             cross_1 = (cross_1[0] % MAZE_WIDTH, cross_1[1] % WINDOW_HEIGHT)
+             cross_2 = (cross_2[0] % MAZE_WIDTH, cross_2[1] % WINDOW_HEIGHT)
+
+             if cross_1 in hazards or cross_2 in hazards:
+                 is_deadly = True
+
+                 next_x = cross_1[1] if cross_1 in hazards else cross_2[0]
+                 next_y = cross_1[1] if cross_1 in hazards else cross_2[1]
+
         # 5. Assign Rewards and Move
          if is_deadly:
             if frames_survived > global_high_score:
