@@ -23,6 +23,29 @@ This is an advanced study project focused on Artificial Intelligence, Game Engin
 * **Environment AI:** LLM API Integration (Groq / Llama)
 * **Architecture:** Asynchronous Threading, Time-based Lerp, State Machine
 
+### 🚀 How to Run Locally
+
+1. **Clone the repository:**
+   ```bash
+   git clone [https://github.com/prBento/StudyCode.git](https://github.com/prBento/StudyCode.git)
+   cd StudyCode/AI_Maze
+   ```
+2. **Install the required dependencies:**
+   Make sure you have Python 3.8+ installed. Then run:
+   ```bash
+   pip install pygame openai python-dotenv
+   ```
+3. **Set up the Environment Variables:**
+   Create a file named `.env` in the root folder of the project and add your Groq API key:
+   ```env
+   GROQ_API_KEY=your_groq_api_key_here
+   ```
+   *(You can get a free API key at console.groq.com)*
+4. **Run the Simulation:**
+   ```bash
+   python main.py
+   ```
+
 ### 🧠 AI Architecture: Why Q-Learning?
 For the Agent's brain, we chose **Tabular Q-Learning** over more complex Deep Learning models for the following reasons:
 1. **Discrete State Space:** The grid-based nature of our maze makes it perfect for a finite state representation. The agent can map its surroundings as clear, discrete states.
@@ -39,7 +62,6 @@ This project follows the *Conventional Commits* specification: `feat:`, `fix:`, 
 - [x] Phase 4: Engine Polish (Multithreading, 60 FPS Time-based Lerp, Torus Topology).
 - [x] Phase 5: XAI & UI/UX (Sci-Fi overhaul, Graceful Degradation, Dual Explainability Panels).
 
----
 
 ## 🇧🇷 Versão em Português Brasileiro
 
@@ -63,6 +85,29 @@ Este é um projeto de estudo avançado focado em Inteligência Artificial, Engen
 * **IA do Ambiente:** Integração via API com LLM (Groq / Llama)
 * **Arquitetura:** Threading Assíncrono, Lerp baseado em Tempo, Máquina de Estados
 
+### 🚀 Como Rodar Localmente
+
+1. **Clone o repositório:**
+   ```bash
+   git clone [https://github.com/prBento/StudyCode.git](https://github.com/prBento/StudyCode.git)
+   cd StudyCode/AI_Maze
+   ```
+2. **Instale as dependências:**
+   Certifique-se de ter o Python 3.8+ instalado. Então rode:
+   ```bash
+   pip install pygame openai python-dotenv
+   ```
+3. **Configure as Variáveis de Ambiente:**
+   Crie um arquivo chamado `.env` na raiz do projeto e adicione sua chave de API da Groq:
+   ```env
+   GROQ_API_KEY=sua_chave_api_groq_aqui
+   ```
+   *(Você pode obter uma chave gratuita em console.groq.com)*
+4. **Inicie a simulação:**
+   ```bash
+   python main.py
+   ```
+
 ### 🧠 Arquitetura da IA: Por que Q-Learning?
 Para o cérebro do Agente, escolhemos o **Q-Learning Tabular** em vez de Redes Neurais complexas pelos seguintes motivos:
 1. **Espaço de Estados Discreto:** A natureza em grade do labirinto o torna perfeito para representação finita.
@@ -78,3 +123,4 @@ Este projeto segue a especificação *Conventional Commits*: `feat:`, `fix:`, `d
 - [x] Fase 3: O Cérebro (Integração com LLM Diretor via Groq).
 - [x] Fase 4: Polimento de Engine (Multithreading, Lerp Temporal a 60 FPS, Topologia Toroide).
 - [x] Fase 5: XAI & UI/UX (Overhaul Sci-Fi, Degradação Graciosa, Painéis Duplos de Explicabilidade).
+
