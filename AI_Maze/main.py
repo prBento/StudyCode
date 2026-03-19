@@ -172,6 +172,9 @@ def director_worker(deaths_snapshot, time_snapshot, epsilon_snapshot):
 
      except Exception as e:
           print(f"[THREAD ERROR] Failed to contact Groq: {e}")
+
+          current_llm_reasoning = "⚠️ API Connection Lost. Using Last Known Good State to keep matrix stable."
+          current_eval_interval = 50
     
      is_awaiting_director = False
 
