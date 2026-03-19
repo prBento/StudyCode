@@ -3,33 +3,42 @@ import json
 from openai import OpenAI
 from dotenv import load_dotenv
 
-# 1. Open our invisible vault and load the environment variables
+# Load environment variables (API Keys) from the hidden .env file
 load_dotenv()
 
+# ==============================================================================
+# LLM GAME DIRECTOR (Generative AI)
+# ==============================================================================
 class GameDirector:
-    def __init__(self):
-        # Initialize the OpenAI client.
-        #self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        
-        # We use gpt-4o-mini as it is incredibly fast, smart, and cost-effective for JSON tasks
-        #self.model_id = 'gpt-4o-mini'
+    """
+    A Cloud-based LLM Game Director.
+    It receives telemetry data from the local Q-Learning Agent, analyzes its performance, 
+    and adjusts the procedural generation rules of the matrix in real-time.
+    """
 
-    # We use the OpenAI library, but point it to Groq's free, blazing-fast servers!
+    def __init__(self):
+        # We use the standard OpenAI Python SDK, but we point the base URL to Groq's servers.
+        # This allows us to use Groq's blazing-fast LPUs (Language Processing Units) for real-time gaming.
         self.client = OpenAI(
             api_key=os.getenv("GROQ_API_KEY"),
             base_url="https://api.groq.com/openai/v1"
         )
         
+        # We use Llama 3.1 (8B) as it is incredibly fast, smart, and highly capable of strict JSON formatting
         self.model_id = 'llama-3.1-8b-instant'  
 
     def evaluate_performance(self, deaths, max_survival_time, current_epsilon):
         """
         Sends the Agent's statistics to the LLM and asks for new game rules.
-        Returns a dictionary with the new 'spawn_chance' and 'hazard_lifetime'.
+        Returns a dictionary with the new 'spawn_chance', 'hazard_lifetime', and 'reasoning'.
         """
         print("\n[DIRECTOR] Analyzing AI performance with Groq...")
         
         # --- PROMPT ENGINEERING ---
+        # 1. Context: Give the LLM its persona and explain the player.
+        # 2. Data: Inject the real-time variables.
+        # 3. Rules: Establish strict mathematical bounds for the output.
+        # 4. Format: Enforce a rigid JSON structure with a One-Shot example.
         prompt = f"""
         You are the Game Director of a dynamic maze.
         The player is a Q-Learning Artificial Intelligence learning to survive.
@@ -58,7 +67,7 @@ class GameDirector:
         """
 
         try:
-            # Send the prompt using the OpenAI SDK
+            # Call the LLM API
             response = self.client.chat.completions.create(
                 model=self.model_id,
                 response_format={ "type": "json_object" }, # Forces the model to output valid JSON
@@ -68,17 +77,23 @@ class GameDirector:
                 ]
             )
             
-            # Extract the string content from OpenAI's response
+            # Extract the string content from the response
             response_text = response.choices[0].message.content
             
-            # Convert the JSON string into a real Python Dictionary
+            # Parse the JSON string into a native Python Dictionary
             new_rules = json.loads(response_text)
             print(f"[DIRECTOR] New rules defined: {new_rules}")
             return new_rules
             
         except Exception as e:
-            # Fail-safe system: If the internet drops or API fails, the game doesn't crash
+            # --- GRACEFUL DEGRADATION (API Fallback) ---
+            # If the internet drops, the API hits a rate limit, or the JSON parsing fails,
+            # we catch the exception so the game doesn't crash. We return safe default rules.
             print(f"[DIRECTOR ERROR] Failed to contact the API: {e}")
-            print("[DIRECTOR] Keeping default difficulty for safety.")
-            return {"spawn_chance": 0.10, "hazard_lifetime": 50}
-
+            print("[DIRECTOR] Triggering Graceful Degradation: Keeping default difficulty for safety.")
+            
+            return {
+                "spawn_chance": 0.10, 
+                "hazard_lifetime": 50,
+                "reasoning": "⚠️ API Connection Lost. Using fallback default state."
+            }
