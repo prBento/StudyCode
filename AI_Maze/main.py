@@ -15,8 +15,8 @@ WINDOW_HEIGHT = 720
 MAZE_WIDTH = WINDOW_WIDTH
 GRID_SIZE = 40          # The world is divided into 40x40 pixel blocks
 FPS = 60                # Game speed slowed down to watch the AI learn
-TICK_RATE = 2           # A IA toma 2 decisões por segundo
-TICK_DELAY = 1000 // TICK_RATE      # Tempo em milissegundos entre as decisões
+TICK_RATE = 1.2           # A IA toma 2 decisões por segundo
+TICK_DELAY = int(1000 // TICK_RATE)      # Tempo em milissegundos entre as decisões
 
 # RGB Color Definitions
 BLACK = (0, 0, 0)
@@ -28,7 +28,7 @@ DARK_GREY = (30, 30, 30)
 
 # Convert frames into clock's time (MM:SS)
 def format_time(frames):
-     total_seconds = frames // TICK_RATE
+     total_seconds = int(frames // TICK_RATE)
      minutes = total_seconds // 60
      seconds = total_seconds % 60
      return f"{minutes:02d}:{seconds:02d}"
